@@ -1,14 +1,16 @@
-// const express = require('express')
+const express = require('express')
+const {getProducts , addProduct } = require("../controllers/productController.js")
+const authMiddleware = require('../middleware/authMiddleware.js')
 
-// const productRoute = express.Router()
+const productRoute = express.Router()
 
 
-// route.get("/" ,)
-// route.post("/" ,)
-// route.post("/upload" ,);
-// route.delete("/:id",);
-// route.put("/:id",);
-// route.patch("/stock/:id",);
+productRoute.get("/", getProducts)  // after complete the testing add authMiddleware for seurity
+productRoute.post("/add" ,addProduct)
+// productRoute.post("/upload" ,);
+// productRoute.delete("/:id",);
+// productRoute.put("/:id",);
+// productRoute.patch("/stock/:id",);
 
-// module.exports = productRoute
+module.exports = productRoute
 
