@@ -4,6 +4,11 @@ const Seller = require("./SellerModel"); // Import Seller model to update produc
 const productSchema = new mongoose.Schema(
   {
   
+    sellerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Seller",
+      required: true,
+    },
     name: {
       type: String,
       required: true,
