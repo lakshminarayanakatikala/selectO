@@ -97,7 +97,8 @@ exports.uploadProducts = async (req, res) => {
     res.status(200).json({ message: "Products uploaded successfully!" });
   } catch (error) {
     res.status(500).json({ error: error.message });
-
+    
+  }}
 //  DELETE — remove a product by ID
 exports.deleteProduct = async (req, res) => {
   try {
