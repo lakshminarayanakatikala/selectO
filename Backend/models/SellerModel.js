@@ -31,11 +31,17 @@ const sellerSchema = new mongoose.Schema(
       required: true,
     },
     products: [
+      // this was helpful for example count the totatl product of the seller
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Product",
+        default :[]
       },
     ],
+    adminApproval: {
+      type: Boolean,
+      default: true, // for now true, later only admin can approve
+    },
   },
   { timestamps: true }
 );

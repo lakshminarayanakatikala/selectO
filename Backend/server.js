@@ -1,23 +1,23 @@
-const express = require("express");
-const productRoute = require("./routes/productRoutes.js")
-const connectDB = require("./db/db.js")
 const dotenv = require("dotenv"); 
-
-const app = express();
-const port = process.env.PORT;
+const connectDB = require("./db/db.js")
 dotenv.config(); 
 connectDB();
-
+const express = require("express");
+const productRoute = require("./routes/productRoutes.js")
+const sellerAuthRoutes = require("./routes/sellerAuthRoutes.js")
+const app = express();
+const port = process.env.PORT; 
+ 
 // Middlewares
-app.use(express.json());
+app.use(express.json());   
 app.use(express.urlencoded({extended : true}))
 
-// coustom Middlewares
+// coustom Middlewares  
 
-// app.use("/api/seller/products" , productRoute );
+app.use("/api/seller/products" , productRoute );
+app.use("/api/seller/auth", sellerAuthRoutes);
 
-
-// Test route
+// Test route 
 app.get("/", (req, res) => {
   res.send("Server is working..");
 });
