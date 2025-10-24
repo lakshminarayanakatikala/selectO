@@ -1,4 +1,5 @@
 const Product = require("../models/ProductModel");
+const XLSX = require("xlsx");
 
 // Add new product 
 exports.addProduct = async (req, res) => {
@@ -65,5 +66,36 @@ exports.getProducts = async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+///add items using xl sheet
+
+
+
+exports.uploadProducts = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const workbook = XLSX.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+    // Convert image string → array
+    const formattedData = data.map((item) => ({
+      ...item,
+      image: item.image
+        ? item.image.split(",").map((url) => url.trim())
+        : [],
+    }));
+
+    await Product.insertMany(formattedData);
+
+    res.status(200).json({ message: "Products uploaded successfully!" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
