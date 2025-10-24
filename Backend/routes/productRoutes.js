@@ -1,6 +1,5 @@
 const express = require('express')
-const {getProducts , addProduct,uploadProducts } = require("../controllers/productController.js")
-const {getProducts , addProduct , deleteProduct , updateProduct , toggleStock} = require("../controllers/productController.js")
+const {getProducts , addProduct , deleteProduct , updateProduct , toggleStock , uploadProducts} = require("../controllers/productController.js")
 const authMiddleware = require('../middleware/authMiddleware.js')
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
