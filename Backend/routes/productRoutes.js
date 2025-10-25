@@ -7,12 +7,12 @@ const upload = multer({ dest: "uploads/" });
 const productRoute = express.Router()
 
 
-productRoute.get("/", getProducts)  // after complete the testing add authMiddleware for seurity
-productRoute.post("/add" ,addProduct)
-productRoute.post("/upload", upload.single("file"), uploadProducts);
+productRoute.get("/",authMiddleware, getProducts)  // after complete the testing add authMiddleware for seurity
 
 productRoute.post("/add", authMiddleware, addProduct);
-// productRoute.post("/upload" ,);
+
+productRoute.post("/upload",authMiddleware, upload.single("file"), uploadProducts);
+
 productRoute.delete("/:id", authMiddleware ,deleteProduct );
 productRoute.put("/:id",authMiddleware , updateProduct);
 productRoute.patch("/stock/:id",authMiddleware , toggleStock);

@@ -1,11 +1,12 @@
 const Product = require("../models/ProductModel");
+const Seller = require("../models/SellerModel");
 const XLSX = require("xlsx");
 
 // Add new product 
 exports.addProduct = async (req, res) => {
   try {
+    const sellerId = req.seller._id;
     const {
-      sellerId,
       name,
       description,
       price,
@@ -41,7 +42,7 @@ exports.addProduct = async (req, res) => {
       rating,
       quantitie,
       category,
-      images: images || [],
+      images: images ,
     });
 
     await newProduct.save();
@@ -54,25 +55,36 @@ exports.addProduct = async (req, res) => {
   }
 };
 
-// Get all products
+// Get all products  -- particular seller
+
 exports.getProducts = async (req, res) => {
   try {
-    const products = await Product.find().sort({ createdAt: -1 });
-    if(products.length > 0){
-        res.status(200).json({ success: true, products: products });
-    }else{
-        res.status(202).json({ success : false ,message : 'Products array is empty'});
+    const sellerId = req.seller._id; // from authMiddleware
 
+    // Find products only for this seller
+    const products = await Product.find({ sellerId }).sort({ createdAt: -1 });
+
+    if (products.length > 0) {
+      res.status(200).json({
+        success: true,
+        count: products.length,
+        products,
+      });
+    } else {
+      res.status(202).json({
+        success: false,
+        message: "No products found for this seller",
+      });
     }
   } catch (error) {
+    console.error("Error fetching products:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 
+
 ///add items using xl sheet
-
-
 
 exports.uploadProducts = async (req, res) => {
   try {
@@ -80,25 +92,45 @@ exports.uploadProducts = async (req, res) => {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
+    // Read Excel file
     const workbook = XLSX.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-    // Convert image string → array
+    const sellerId = req.seller._id; // ✅ from middleware
+
+    // Prepare data
     const formattedData = data.map((item) => ({
       ...item,
-      image: item.image
-        ? item.image.split(",").map((url) => url.trim())
-        : [],
+      sellerId,
+      image: item.image ? item.image.split(",").map((url) => url.trim()) : [],
     }));
 
-    await Product.insertMany(formattedData);
+    // 🛠 Insert all products for this seller
+    const insertedProducts = await Product.insertMany(formattedData);
 
-    res.status(200).json({ message: "Products uploaded successfully!" });
+    // Extract product IDs
+    const productIds = insertedProducts.map((product) => product._id);
+
+    // 🔗 Update seller to include all new products
+    await Seller.findByIdAndUpdate(
+      sellerId,
+      { $push: { products: { $each: productIds } } },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Products uploaded successfully and linked to seller",
+      count: insertedProducts.length,
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
-    
-  }}
+    console.error("Upload error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+
 //  DELETE — remove a product by ID
 exports.deleteProduct = async (req, res) => {
   try {
@@ -112,6 +144,13 @@ exports.deleteProduct = async (req, res) => {
         .status(404)
         .json({ message: "Product not found or not authorized to delete" });
     }
+
+    // Remove the product reference from Seller's products array
+    await Seller.findByIdAndUpdate(
+      sellerId,
+      { $pull: { products: product._id } }, // remove product id
+      { new: true }
+    );
 
     res.status(200).json({ message: "Product deleted successfully" });
   } catch (error) {

@@ -33,7 +33,7 @@ const sellerSchema = new mongoose.Schema(
     products: [
       // this was helpful for example count the totatl product of the seller
       {
-        type: mongoose.Schema.Types.ObjectId,
+        type: [mongoose.Schema.Types.ObjectId],
         ref: "Product",
         default :[]
       },
