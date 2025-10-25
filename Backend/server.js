@@ -16,10 +16,10 @@ app.use(express.urlencoded({extended : true}))
 
 app.use("/api/seller/products" , productRoute );
 app.use("/api/seller/auth", sellerAuthRoutes);
-
+ 
 // Test route 
 app.get("/", (req, res) => {
-  res.send("Server is working..");
+  res.send("Server is working.."); 
 });
 
 app.listen(port, () =>
