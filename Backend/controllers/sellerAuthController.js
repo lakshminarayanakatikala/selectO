@@ -2,9 +2,7 @@ const Seller = require("../models/SellerModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-/**
- *  Register new seller
- */
+// Register new seller
 exports.registerSeller = async (req, res) => {
   try {
     const { name, email, password, shopName, address, phone } = req.body;

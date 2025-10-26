@@ -97,7 +97,7 @@ exports.uploadProducts = async (req, res) => {
     const sheetName = workbook.SheetNames[0];
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-    const sellerId = req.seller._id; // ✅ from middleware
+    const sellerId = req.seller._id; // from middleware
 
     // Prepare data
     const formattedData = data.map((item) => ({
