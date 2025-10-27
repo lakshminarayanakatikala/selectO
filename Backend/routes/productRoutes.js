@@ -1,5 +1,16 @@
 const express = require('express')
-const {getProducts , addProduct , deleteProduct , updateProduct , toggleStock , uploadProducts} = require("../controllers/productController.js")
+const {
+  getProducts,
+  addProduct,
+  deleteProduct,
+  updateProduct,
+  toggleStock,
+  uploadProducts,
+  applyDiscountToAllProducts,
+  restoreOriginalPrices,
+  applyCategoryDiscount,
+  removeCategoryDiscount,
+} = require("../controllers/productController.js");
 const authMiddleware = require('../middleware/authMiddleware.js')
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
@@ -17,7 +28,15 @@ productRoute.delete("/:id", authMiddleware ,deleteProduct );
 productRoute.put("/:id",authMiddleware , updateProduct);
 productRoute.patch("/stock/:id",authMiddleware , toggleStock);
 
+//discount for all products
+productRoute.patch("/discount", authMiddleware, applyDiscountToAllProducts);
+productRoute.patch("/restore-prices", authMiddleware, restoreOriginalPrices);
+
+// Category-wise discount
+productRoute.patch("/category/discount", authMiddleware, applyCategoryDiscount);
+productRoute.patch("/category/remove-discount", authMiddleware, removeCategoryDiscount);
+
+
 module.exports = productRoute
 
-//orders vastai 
 
