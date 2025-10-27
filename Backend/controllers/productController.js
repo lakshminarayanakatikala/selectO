@@ -217,3 +217,205 @@ exports.toggleStock = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+exports.applyDiscountToAllProducts = async (req, res) => {
+  try {
+    const sellerId = req.seller._id;
+    const { discountPercentage } = req.body;
+
+    if (
+      !discountPercentage ||
+      discountPercentage <= 0 ||
+      discountPercentage > 99
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid discount percentage (1-99%)",
+      });
+    }
+
+    const products = await Product.find({ sellerId });
+
+    if (products.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No products found for this seller",
+      });
+    }
+
+    const updatedProducts = await Promise.all(
+      products.map(async (product) => {
+        // store original price only once
+        if (!product.isDiscounted) {
+          product.originalPrice = product.price;
+        }
+        
+        const discountedPrice =  product.originalPrice - (product.originalPrice * discountPercentage) / 100;
+
+        product.price = Math.round(discountedPrice * 100) / 100;
+        product.isDiscounted = true;
+        product.sellerDiscount = discountPercentage;
+        await product.save();
+        return product;
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Applied ${discountPercentage}% discount to all products`,
+      updatedCount: updatedProducts.length,
+      updatedProducts,
+    });
+  } catch (error) {
+    console.error("Error applying discount:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+// re-store the original price all discounts are remove
+
+exports.restoreOriginalPrices = async (req, res) => {
+  try {
+    const sellerId = req.seller._id;
+
+    const products = await Product.find({ sellerId, isDiscounted: true });
+
+    if (products.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No discounted products found for this seller",
+      });
+    }
+
+    const restoredProducts = await Promise.all(
+      products.map(async (product) => {
+        if (product.originalPrice) {
+          product.price = product.originalPrice;
+          product.isDiscounted = false;
+          product.originalPrice = undefined; // optional: clear the field
+          product.sellerDiscount = 0;
+          await product.save();
+        }
+        return product;
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "All discounted products restored to their original prices",
+      restoredCount: restoredProducts.length,
+      restoredProducts,
+    });
+  } catch (error) {
+    console.error("Error restoring prices:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+
+// Apply discount for all products in a specific category (for that seller)
+exports.applyCategoryDiscount = async (req, res) => {
+  try {
+    const sellerId = req.seller._id;
+    const { category, discountPercentage } = req.body;
+
+    // Validate input
+    if (!category || !discountPercentage) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Category and discount percentage are required" });
+    }
+
+    if (discountPercentage <= 0 || discountPercentage > 90) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Discount percentage must be between 1–90" });
+    }
+
+    // Get products in that category belonging to the seller
+    const products = await Product.find({ sellerId, category });
+
+    if (products.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No products found for this category" });
+    }
+
+    // Update each product
+    for (const product of products) {
+      if (!product.isDiscounted) {
+        product.originalPrice = product.price;
+      }
+      const discountedPrice =
+        product.originalPrice - (product.originalPrice * discountPercentage) / 100;
+
+      product.price = Math.round(discountedPrice * 100) / 100;
+      product.isDiscounted = true;
+      product.sellerDiscount = discountPercentage;
+      await product.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Applied ${discountPercentage}% discount to all ${category} products.`,
+      totalUpdated: products.length,
+    });
+  } catch (error) {
+    console.error("Error applying category discount:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+// Remove discount from all products in a category
+exports.removeCategoryDiscount = async (req, res) => {
+  try {
+    const sellerId = req.seller._id;
+    const { category } = req.body;
+
+    if (!category) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Category is required" });
+    }
+
+    const products = await Product.find({
+      sellerId,
+      category,
+      isDiscounted: true,
+    });
+
+    if (products.length === 0) {
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "No discounted products found in this category",
+        });
+    }
+
+    for (const product of products) {
+      product.price = product.originalPrice;
+      product.originalPrice = undefined;
+      product.isDiscounted = false;
+      product.sellerDiscount = 0;
+      await product.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Removed discounts from all ${category} products.`,
+      totalUpdated: products.length,
+    });
+  } catch (error) {
+    console.error("Error removing category discount:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+
+
