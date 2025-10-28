@@ -418,4 +418,177 @@ exports.removeCategoryDiscount = async (req, res) => {
 
 
 
+//  Get single product by ID
+exports.getSingleProduct = async (req, res) => {
+  try {
+    const { id } = req.params; // product ID from URL
 
+    const product = await Product.findById(id).populate(
+      "sellerId",
+      "shopName address phone"
+    );
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      product,
+    });
+  } catch (error) {
+    console.error("Error fetching product:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching product",
+    });
+  }
+};
+
+// get all  Categories for showing on the page
+exports.getAllCategories = async (req, res) => {
+  try {
+    const categories = await Product.distinct("category");
+
+    res.status(200).json({
+      success: true,
+      count: categories.length,
+      categories,
+    });
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+
+// Get products by category 
+exports.getProductsByCategory = async (req, res) => {
+  try {
+    const { category } = req.params; // e.g., /products/category/Fashion
+
+    const products = await Product.find({ category })
+      .populate("sellerId", "shopName address phone");
+
+    if (!products.length) {
+      return res.status(200).json({
+        success: true,
+        message: "No products found in this category",
+        products: [],
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products,
+    });
+  } catch (error) {
+    console.error("Error fetching products by category:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+// get all products
+
+exports.getAllProducts = async (req, res) => {
+  try {
+    const products = await Product.find().sort({ createdAt: -1 });
+    if (!products.length)
+      return res
+        .status(404)
+        .json({ success: false, message: "No products found" });
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products,
+    });
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+
+// get offer products
+
+exports.getExclusiveOffers = async (req, res) => {
+  try {
+    // Fetch only products with a discount greater than 0
+    const products = await Product.find({ sellerDiscount: { $gt: 0 } })
+      .populate("sellerId", "shopName address phone")
+      .sort({ sellerDiscount: -1 }); // 👈 Sort descending by discount
+
+    // Optionally add discounted price
+    const offers = products.map((p) => ({
+      ...p._doc,
+      discountedPrice: p.price - (p.price * p.sellerDiscount) / 100,
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: offers.length,
+      offers,
+    });
+  } catch (error) {
+    console.error("Error fetching exclusive offers:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+
+
+//  Bachelor Filter → Filter by price (and optionally category)
+
+exports.getBachelorFilterProducts = async (req, res) => {
+  try {
+    const { maxPrice, category } = req.query;
+    // Example queries:
+    // ?maxPrice=100
+    // ?maxPrice=100&category=Fruits
+
+    if (!maxPrice || isNaN(maxPrice)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid maxPrice (example: ?maxPrice=100)",
+      });
+    }
+
+    // Dynamic filter
+    const filter = { price: { $lte: Number(maxPrice) } };
+
+    if (category) {
+      // Match case-insensitive category
+      filter.category = { $regex: new RegExp(category, "i") };
+    }
+
+    const products = await Product.find(filter)
+      .populate("sellerId", "shopName address phone")
+      .sort({ price: 1 }); // Sort cheapest first
+
+    if (products.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No products found under this price/category",
+        products: [],
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products,
+    });
+  } catch (error) {
+    console.error("Error fetching bachelor filter products:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
