@@ -3,13 +3,13 @@ exports.apiList = [
   {
     method: "GET",
     path: "/api/seller/products",
-    desc: "Get all products (admin/seller)",
+    desc: "Get all products seller",
   },
   { method: "POST", path: "/api/seller/products/add", desc: "Add new product" },
   {
     method: "POST",
     path: "/api/seller/products/upload",
-    desc: "Upload product image(s)",
+    desc: "Upload xlsl sheet",
   },
   {
     method: "DELETE",
@@ -61,12 +61,12 @@ exports.apiList = [
   {
     method: "POST",
     path: "/api/seller/orders/create",
-    desc: "Create new order",
+    desc: "user create new order ",
   },
   {
     method: "GET",
     path: "/api/seller/orders/all",
-    desc: "Get all seller orders",
+    desc: "Get all seller orders ",
   },
   {
     method: "GET",
@@ -85,7 +85,11 @@ exports.apiList = [
   },
 
   // Notifications
-  { method: "GET", path: "/api/notifications", desc: "Get all notifications" },
+  {
+    method: "GET",
+    path: "/api/notifications",
+    desc: "Get all notifications (present working)",
+  },
 
   // User APIs
   { method: "POST", path: "/api/user/register", desc: "Register new user" },
@@ -98,8 +102,8 @@ exports.apiList = [
   { method: "GET", path: "/api/user/", desc: "Get all favorites" },
   {
     method: "GET",
-    path: "/api/user/products/bachelor-filter",
-    desc: "Get filtered products (bachelor)",
+    path: "/api/user/products/bachelor-filter?maxPrice=100&category=Fruits",
+    desc: "Get filtered products (bachelor) here category is optional if need add it other wise no",
   },
   {
     method: "GET",
@@ -114,12 +118,12 @@ exports.apiList = [
   {
     method: "GET",
     path: "/api/user/products",
-    desc: "Get all products (user)",
+    desc: "Get all products all seller's",
   },
   {
     method: "GET",
     path: "/api/user/products/offers/exclusive",
-    desc: "Get exclusive offers",
+    desc: "Get exclusive offers based on discount",
   },
   { method: "GET", path: "/api/user/categories", desc: "Get all categories" },
   {
@@ -129,13 +133,21 @@ exports.apiList = [
   },
 
   //Cart APIs
-  { method: "POST", path: "/api/cart/add", desc: "Add product to cart" },
+  {
+    method: "POST",
+    path: "/api/cart/add",
+    desc: "Add product to cart  {'productId':'id', quantity:1}",
+  },
   {
     method: "POST",
     path: "/api/cart/remove",
-    desc: "Decrease item quantity in cart",
+    desc: "Decrease item quantity in cart {'productId':'id', decreaseBy:1}",
   },
   { method: "GET", path: "/api/cart/", desc: "Get user cart" },
-  { method: "DELETE", path: "/api/cart/delete", desc: "Remove item from cart" },
+  {
+    method: "DELETE",
+    path: "/api/cart/delete",
+    desc: "Remove item from cart { 'productId':'id' }",
+  },
   { method: "DELETE", path: "/api/cart/clear", desc: "Clear user's cart" },
 ];
