@@ -552,7 +552,7 @@ exports.getBachelorFilterProducts = async (req, res) => {
   try {
     const { maxPrice, category } = req.query;
     // Example queries:
-    // ?maxPrice=100
+    // ?maxPrice=100 
     // ?maxPrice=100&category=Fruits
 
     if (!maxPrice || isNaN(maxPrice)) {

@@ -21,7 +21,7 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    originalPrice: { type: Number }, // store price before discount
+    originalPrice: { type: Number , default :0}, // store price before discount
     sellerDiscount:{
       type : Number,
       default : 0
