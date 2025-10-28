@@ -5,14 +5,21 @@ require("./jobs/stockChecker.js"); // starts the cron job automatically
 dotenv.config(); 
 connectDB();
 const express = require("express");
+const path = require("path")
 const productRoute = require("./routes/productRoutes.js")
 const sellerAuthRoutes = require("./routes/sellerAuthRoutes.js")
 const orderRoutes = require("./routes/orderRoutes.js")
 const userRoutes = require("./routes/userRoutes.js")
 const notificationRoutes = require("./routes/notificationRoutes");
+const cartRoutes = require("./routes/cartRoutes");
+const {apiList} = require('./views/apis.js')
 
 const app = express();
 const port = process.env.PORT;   
+
+// Set view engine
+app.set("views", path.join(__dirname, "views"));
+app.set("view engine", "ejs");
  
 // Middlewares
 app.use(express.json());   
@@ -27,10 +34,16 @@ app.use("/api/notifications", notificationRoutes);
 
 //user middlewares   
 app.use("/api/user", userRoutes);
- 
+app.use("/api/cart", cartRoutes);
+
+
+
+  
 // Test route 
 app.get("/", (req, res) => {
-  res.send("Server is working.."); 
+  res.render("root" ,{apiList})
+  // res.send("Server is working.."); 
+
 });
 
 app.listen(port, () =>
