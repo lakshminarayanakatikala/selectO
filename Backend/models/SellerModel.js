@@ -35,13 +35,14 @@ const sellerSchema = new mongoose.Schema(
       {
         type: [mongoose.Schema.Types.ObjectId],
         ref: "Product",
-        default :[]
+        default: [],
       },
     ],
     adminApproval: {
       type: Boolean,
       default: true, // for now true, later only admin can approve
     },
+    isOnline: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

@@ -102,3 +102,69 @@ exports.loginSeller = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+//  Toggle Online/Offline status
+exports.toggleOnlineStatus = async (req, res) => {
+  try {
+    const sellerId = req.seller._id;
+    const { isOnline } = req.body; // expect true/false
+
+    const seller = await Seller.findByIdAndUpdate(
+      sellerId,
+      { isOnline },
+      { new: true }
+    );
+
+    if (!seller) {
+      return res.status(404).json({ success: false, message: "Seller not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Shop is now ${isOnline ? "Online 🟢" : "Offline 🔴"}`,
+      seller,
+    });
+  } catch (error) {
+    console.error("Error toggling online status:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+
+//  Get all sellers with  filter: online/offline
+exports.getAllSellers = async (req, res) => {
+  try {
+    const { status } = req.query; // "online", "offline", or undefined
+    let filter = {};
+
+    if (status === "online") {
+      filter.isOnline = true;
+    } else if (status === "offline") {
+      filter.isOnline = false;
+    }
+
+    const sellers = await Seller.find(filter).select(
+      "shopName address phone isOnline products"
+    );
+
+    if (!sellers || sellers.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No sellers found for the selected filter",
+        sellers: [],
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      total: sellers.length,
+      sellers,
+    });
+  } catch (error) {
+    console.error("Error fetching sellers:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
