@@ -1,8 +1,8 @@
 const dotenv = require("dotenv"); 
+dotenv.config(); 
 const connectDB = require("./db/db.js")
 require("./jobs/stockChecker.js"); // starts the cron job automatically
 
-dotenv.config(); 
 connectDB();
 const express = require("express");
 const path = require("path")
@@ -12,7 +12,8 @@ const orderRoutes = require("./routes/orderRoutes.js")
 const userRoutes = require("./routes/userRoutes.js")
 const notificationRoutes = require("./routes/notificationRoutes");
 const cartRoutes = require("./routes/cartRoutes");
-const {apiList} = require('./views/apis.js')
+const {apiList} = require('./views/apis.js');
+const showProductsRoute = require("./routes/showProducts.js");
 
 const app = express();
 const port = process.env.PORT;   
@@ -35,10 +36,9 @@ app.use("/api/notifications", notificationRoutes);
 //user middlewares   
 app.use("/api/user", userRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/apis" , showProductsRoute)
 
 
-
-  
 // Test route 
 app.get("/", (req, res) => {
   res.render("root" ,{apiList})

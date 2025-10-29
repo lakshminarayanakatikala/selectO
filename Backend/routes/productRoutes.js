@@ -13,14 +13,20 @@ const {
 } = require("../controllers/productController.js");
 const authMiddleware = require('../middleware/authMiddleware.js')
 const multer = require("multer");
-const upload = multer({ dest: "uploads/" });
+// const upload = multer({ dest: "uploads/" });
+const upload = require("../middleware/multer.js");
 
 const productRoute = express.Router()
 
 
 productRoute.get("/",authMiddleware, getProducts)  // after complete the testing add authMiddleware for seurity
 
-productRoute.post("/add", authMiddleware, addProduct);
+productRoute.post(
+  "/add",
+  authMiddleware,
+  upload.array("images", 4),
+  addProduct
+);
 
 productRoute.post("/upload",authMiddleware, upload.single("file"), uploadProducts);
 
