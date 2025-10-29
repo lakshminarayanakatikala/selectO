@@ -1,36 +1,44 @@
 const Product = require("../models/ProductModel");
 const Seller = require("../models/SellerModel");
 const XLSX = require("xlsx");
+const cloudinary = require("../config/cloudinary");
+const fs = require("fs");
+const axios = require("axios");
+const path = require("path");
 
 // Add new product 
+
 exports.addProduct = async (req, res) => {
   try {
     const sellerId = req.seller._id;
-    const {
-      name,
-      description,
-      price,
-      stock,
-      rating,
-      quantitie,
-      category,
-      images,
-    } = req.body;
+    const { name, description, price, rating, quantitie, category } = req.body;
 
     // Validation
-    if (!name || !description || !price || !stock || !category || !sellerId) {
+    if (!name || !description || !price  || !category) {
       return res
         .status(400)
-        .json({ success: false, message: "All fields are required"});
+        .json({ success: false, message: "All fields are required" });
     }
 
-    if (images && images.length > 4) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "You can upload up to 4 images only",
+    // Handle image uploads
+    const uploadedImages = [];
+
+    if (req.files && req.files.length > 0) {
+      if (req.files.length > 4) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "You can upload up to 4 images only",
+          });
+      }
+
+      for (const file of req.files) {
+        const result = await cloudinary.uploader.upload(file.path, {
+          folder: "products",
         });
+        uploadedImages.push(result.secure_url);
+      }
     }
 
     const newProduct = new Product({
@@ -38,22 +46,25 @@ exports.addProduct = async (req, res) => {
       name,
       description,
       price,
-      stock,
       rating,
       quantitie,
       category,
-      images: images ,
+      image: uploadedImages,
     });
 
     await newProduct.save();
-    res
-      .status(201)
-      .json({ message: "Product added successfully", product: newProduct });
+
+    res.status(201).json({
+      success: true,
+      message: "Product added successfully",
+      product: newProduct,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("Error adding product:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 // Get all products  -- particular seller
 
@@ -86,49 +97,151 @@ exports.getProducts = async (req, res) => {
 
 ///add items using xl sheet
 
+// exports.uploadProducts = async (req, res) => {
+//   try {
+//     if (!req.file) {
+//       return res.status(400).json({ message: "No file uploaded" });
+//     }
+
+//     // Read Excel file
+//     const workbook = XLSX.readFile(req.file.path);
+//     const sheetName = workbook.SheetNames[0];
+//     const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+//     const sellerId = req.seller._id; // from middleware
+
+//     // Prepare data
+//     const formattedData = data.map((item) => ({
+//       ...item,
+//       sellerId,
+//       image: item.image ? item.image.split(",").map((url) => url.trim()) : [],
+//     }));
+
+//     // 🛠 Insert all products for this seller
+//     const insertedProducts = await Product.insertMany(formattedData);
+
+//     // Extract product IDs
+//     const productIds = insertedProducts.map((product) => product._id);
+
+//     // 🔗 Update seller to include all new products
+//     await Seller.findByIdAndUpdate(
+//       sellerId,
+//       { $push: { products: { $each: productIds } } },
+//       { new: true }
+//     );
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Products uploaded successfully and linked to seller",
+//       count: insertedProducts.length,
+//     });
+//   } catch (error) {
+//     console.error("Upload error:", error);
+//     res.status(500).json({ success: false, error: error.message });
+//   }
+// };
+
+
 exports.uploadProducts = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No file uploaded" });
     }
 
-    // Read Excel file
+    const sellerId = req.seller._id;
+
+    // 🧾 Read Excel
     const workbook = XLSX.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-    const sellerId = req.seller._id; // from middleware
+    const formattedData = [];
 
-    // Prepare data
-    const formattedData = data.map((item) => ({
-      ...item,
-      sellerId,
-      image: item.image ? item.image.split(",").map((url) => url.trim()) : [],
-    }));
+    for (const item of data) {
+      const imageUrls = [];
 
-    // 🛠 Insert all products for this seller
+      if (item.image) {
+        // Split multiple URLs separated by commas
+        const urls = item.image.split(",").map((url) => url.trim());
+
+        for (let url of urls.slice(0, 4)) {
+          try {
+            // ✅ If already Cloudinary-hosted, keep it
+            if (url.includes("res.cloudinary.com")) {
+              imageUrls.push(url);
+              continue;
+            }
+
+            // ✅ Download the image temporarily
+            const response = await axios({
+              url,
+              responseType: "arraybuffer",
+            });
+
+            // Save to temporary file
+            const tempPath = path.join(
+              __dirname,
+              `../temp/${Date.now()}-image.jpg`
+            );
+            fs.writeFileSync(tempPath, response.data);
+
+            // ✅ Upload to Cloudinary
+            const result = await cloudinary.uploader.upload(tempPath, {
+              folder: "products",
+            });
+
+            imageUrls.push(result.secure_url);
+
+            // Delete local temp file
+            fs.unlinkSync(tempPath);
+          } catch (err) {
+            console.warn("⚠️ Failed to upload image:", url, err.message);
+          }
+        }
+      }
+
+      formattedData.push({
+        sellerId,
+        name: item.name,
+        description: item.description || "",
+        price: item.price || 0,
+        quantitie: item.quantitie || 0,
+        category: item.category || "Uncategorized",
+        stock: item.stock ?? true,
+        rating: item.rating || 0,
+        image: imageUrls,
+      });
+    }
+
+    // 🛠 Save products in DB
     const insertedProducts = await Product.insertMany(formattedData);
 
-    // Extract product IDs
-    const productIds = insertedProducts.map((product) => product._id);
-
-    // 🔗 Update seller to include all new products
+    // 🔗 Link them to seller
+    const productIds = insertedProducts.map((p) => p._id);
     await Seller.findByIdAndUpdate(
       sellerId,
       { $push: { products: { $each: productIds } } },
       { new: true }
     );
 
+    // Clean up Excel file
+    fs.unlinkSync(req.file.path);
+
     res.status(200).json({
       success: true,
-      message: "Products uploaded successfully and linked to seller",
+      message: "Products uploaded successfully with Cloudinary image sync",
       count: insertedProducts.length,
     });
   } catch (error) {
     console.error("Upload error:", error);
-    res.status(500).json({ success: false, error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
+
 
 
 //  DELETE — remove a product by ID

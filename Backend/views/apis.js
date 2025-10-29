@@ -150,4 +150,27 @@ exports.apiList = [
     desc: "Remove item from cart { 'productId':'id' }",
   },
   { method: "DELETE", path: "/api/cart/clear", desc: "Clear user's cart" },
+
+  // show sellers and related products
+  { method: "GET", path: "/apis/sellers", desc: "show all sellers" },
+  {
+    method: "GET",
+    path: "/apis/:sellerId/products",
+    desc: "show the seller products",
+  },
+  {
+    method: "GET",
+    path: "/apis/:sellerId/products",
+    desc: "show the seller products",
+  },
+  {
+    method: "GET",
+    path: "/apis/:sellerId/categories",
+    desc: "show the particular seller categories ",
+  },
+  {
+    method: "GET",
+    path: "/sellers/:sellerId/products/:category",
+    desc: "show the particular categories like veg ,fruits",
+  },
 ];

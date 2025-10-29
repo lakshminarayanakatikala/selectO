@@ -1,4 +1,6 @@
 const User = require("../models/UserModel");
+const Seller = require("../models/SellerModel");
+const Product = require("../models/ProductModel")
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -109,3 +111,74 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+// GET /api/sellers
+exports.getAllSellers = async (req, res) => {
+  try {
+    const sellers = await Seller.find().select("shopName address phone isOnline");
+    res.status(200).json({ success: true, sellers });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// GET /api/sellers/:sellerId/products
+exports.getSellerProducts = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    const products = await Product.find({ sellerId });
+
+    if (!products.length) {
+      return res.status(200).json({ success: true, message: "No products found", products: [] });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products
+    });
+  } catch (error) {
+    console.error("Error fetching seller products:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// GET /api/sellers/:sellerId/categories
+exports.getSellerCategories = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    const categories = await Product.distinct("category", { sellerId });
+
+    res.status(200).json({
+      success: true,
+      count: categories.length,
+      categories,
+    });
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// GET /api/sellers/:sellerId/products/:category
+exports.getSellerProductsByCategory = async (req, res) => {
+  try {
+    const { sellerId, category } = req.params;
+
+    const products = await Product.find({
+      sellerId,
+      category: { $regex: new RegExp(`^${category}$`, "i") },
+    });
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products,
+    });
+  } catch (error) {
+    console.error("Error filtering products:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
