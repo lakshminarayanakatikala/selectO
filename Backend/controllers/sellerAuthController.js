@@ -1,13 +1,61 @@
 const Seller = require("../models/SellerModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-
+const cloudinary = require("../config/cloudinary.js");
+const fs = require("fs");
 // Register new seller
+// exports.registerSeller = async (req, res) => {
+//   try {
+//     const { name, email, password, shopName, address, phone } = req.body;
+
+//     // Check if seller already exists (by email or phone)
+//     const existingSeller = await Seller.findOne({
+//       $or: [{ email }, { phone }],
+//     });
+
+//     if (existingSeller) {
+//       return res.status(400).json({
+//         message: "Seller already registered with this email or phone number",
+//       });
+//     }
+
+//     // Hash password
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     // Create new seller
+//     const newSeller = new Seller({
+//       name,
+//       email,
+//       password: hashedPassword,
+//       shopName,
+//       address,
+//       phone,
+//       adminApproval: true, // temporary until admin app is made
+//     });
+
+//     await newSeller.save();
+
+//     res.status(201).json({
+//       message: "Seller registered successfully",
+//       seller: {
+//         id: newSeller._id,
+//         name: newSeller.name,
+//         email: newSeller.email,
+//         phone: newSeller.phone,
+//         shopName: newSeller.shopName,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Error registering seller:", error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
 exports.registerSeller = async (req, res) => {
   try {
     const { name, email, password, shopName, address, phone } = req.body;
 
-    // Check if seller already exists (by email or phone)
+    // Check if seller already exists
     const existingSeller = await Seller.findOne({
       $or: [{ email }, { phone }],
     });
@@ -21,6 +69,21 @@ exports.registerSeller = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    let shopImage = "";
+
+    // If file uploaded, upload it to Cloudinary
+    if (req.file) {
+      const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+        folder: "sellerShops",
+        resource_type: "image",
+      });
+
+      shopImage = uploadResult.secure_url;
+
+      // remove local temp file
+      fs.unlinkSync(req.file.path);
+    }
+
     // Create new seller
     const newSeller = new Seller({
       name,
@@ -29,7 +92,8 @@ exports.registerSeller = async (req, res) => {
       shopName,
       address,
       phone,
-      adminApproval: true, // temporary until admin app is made
+      shopImage,
+      adminApproval: true, // default
     });
 
     await newSeller.save();
@@ -42,6 +106,7 @@ exports.registerSeller = async (req, res) => {
         email: newSeller.email,
         phone: newSeller.phone,
         shopName: newSeller.shopName,
+        shopImage: newSeller.shopImage,
       },
     });
   } catch (error) {

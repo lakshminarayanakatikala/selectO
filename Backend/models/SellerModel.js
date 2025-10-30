@@ -22,6 +22,11 @@ const sellerSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    shopImage: {
+      type: String, // Cloudinary URL
+      default: "", // in case image not uploaded
+      required:true
+    },
     address: {
       type: String,
       required: true,
@@ -38,12 +43,12 @@ const sellerSchema = new mongoose.Schema(
         default: [],
       },
     ],
-    categories: [{ type: String}],
+    categories: [{ type: String }],
     adminApproval: {
       type: Boolean,
       default: true, // for now true, later only admin can approve
     },
-    isOnline: { type: Boolean, default: false }
+    isOnline: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

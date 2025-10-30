@@ -8,9 +8,10 @@ const {
   getAllSellers,
 } = require("../controllers/sellerAuthController");
 const authMiddleware = require("../middleware/authMiddleware");
+const upload = require('../middleware/multer')
 
 // Register new seller
-sellerAuthRoutes.post("/register", registerSeller);
+sellerAuthRoutes.post("/register",upload.single("shopImage"), registerSeller);
 
 // Login with email OR phone
 sellerAuthRoutes.post("/login", loginSeller);

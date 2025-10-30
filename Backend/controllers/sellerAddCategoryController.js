@@ -5,40 +5,35 @@ const fs = require("fs");
 // Add new category
 const addCategory = async (req, res) => {
   try {
-    const { name, imageUrl } = req.body; // user can send imageUrl or file
+    const { name } = req.body;
 
     if (!name) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Category name is required" });
-    }
-
-    let image;
-
-    // If user uploads a file
-    if (req.file) {
-      const uploadResult = await cloudinary.uploader.upload(req.file.path, {
-        folder: "categories",
-        resource_type: "image",
+      return res.status(400).json({
+        success: false,
+        message: "Category name is required",
       });
-
-      image = uploadResult.secure_url;
-      fs.unlinkSync(req.file.path); // cleanup temp file
-    }
-    // Or user gives image URL directly
-    else if (imageUrl) {
-      image = imageUrl.trim();
-    }
-    // No image provided
-    else {
-      return res
-        .status(400)
-        .json({ success: false, message: "Category image is required" });
     }
 
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Category image file is required",
+      });
+    }
+
+    // Upload to Cloudinary
+    const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+      folder: "categories",
+      resource_type: "image",
+    });
+
+    // Remove local temp file
+    fs.unlinkSync(req.file.path);
+
+    // Save in DB
     const category = await Category.create({
       name,
-      image,
+      image: uploadResult.secure_url,
     });
 
     res.status(201).json({
@@ -48,7 +43,11 @@ const addCategory = async (req, res) => {
     });
   } catch (error) {
     console.error("Error adding category:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
   }
 };
 
