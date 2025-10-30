@@ -14,6 +14,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const {apiList} = require('./views/apis.js');
 const showProductsRoute = require("./routes/showProducts.js");
+const categoryRouter  = require("./routes/categoryRoutes.js");
 
 const app = express();
 const port = process.env.PORT;   
@@ -37,6 +38,9 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/apis" , showProductsRoute)
+
+//admin middlewares
+app.use('/api/admin' , categoryRouter)
 
 
 // Test route 

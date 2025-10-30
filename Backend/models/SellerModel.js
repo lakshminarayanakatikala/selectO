@@ -38,6 +38,7 @@ const sellerSchema = new mongoose.Schema(
         default: [],
       },
     ],
+    categories: [{ type: String}],
     adminApproval: {
       type: Boolean,
       default: true, // for now true, later only admin can approve

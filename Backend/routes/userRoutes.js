@@ -15,9 +15,9 @@ userRoutes.post("/login", loginUser);
 userRoutes.post("/toggle", userAuthMiddleware, toggleFavorite);
 
 // Get all favorites
-userRoutes.get("/", userAuthMiddleware,getFavorites );
+userRoutes.get("/", userAuthMiddleware,getFavorites);
 userRoutes.get("/products/bachelor-filter", getBachelorFilterProducts);
-userRoutes.get("/products/:id", userAuthMiddleware,getFavorites );
+userRoutes.get("/products/:id", userAuthMiddleware,getFavorites);
 userRoutes.get("/singleproduct/:id", getSingleProduct);
 // Get all products
 userRoutes.get("/products", getAllProducts);
@@ -26,8 +26,6 @@ userRoutes.get("/products/offers/exclusive", getExclusiveOffers);
 
 userRoutes.get("/categories", getAllCategories);
 userRoutes.get("/category/:category", getProductsByCategory);
-
-
 
 
 

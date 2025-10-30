@@ -114,53 +114,12 @@ exports.decreaseCartItem = async (req, res) => {
 };
 
 
-//  Get user cart (auto-refresh product prices)
-// exports.getCart = async (req, res) => {
-//   try {
-//     const userId = req.user._id;
-//     let cart = await Cart.findOne({ userId }).populate(
-//       "items.productId",
-//       "name price image category quantitie"
-//     );
-
-//     if (!cart) {
-//       return res.status(200).json({
-//         success: true,
-//         message: "Empty cart",
-//         cart: { items: [], totalPrice: 0 },
-//       });
-//     }
-
-//     //  Update item prices if product price changed
-//     let updated = false;
-//     for (const item of cart.items) {
-//       if (item.productId && item.price !== item.productId.price) {
-//         item.price += item.productId.price;
-//         updated = true;
-//       }
-//     }
-
-//     if (updated) {
-//       cart.totalPrice = cart.items.reduce(
-//         (sum, i) => sum + i.price * i.quantity,
-//         0
-//       );
-//       await cart.save();
-//     }
-
-//     res.status(200).json({ success: true, cart });
-//   } catch (error) {
-//     console.error("Error fetching cart:", error);
-//     res.status(500).json({ success: false, message: "Server error" });
-//   }
-// };
-
 exports.getCart = async (req, res) => {
   try {
     const userId = req.user._id;
 
     let cart = await Cart.findOne({ userId })
-    .populate(
+    .populate( 
       "items.productId",
       "name price image category quantity"
     );

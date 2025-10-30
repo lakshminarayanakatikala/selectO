@@ -171,7 +171,7 @@ exports.getSellerProductsByCategory = async (req, res) => {
       category: { $regex: new RegExp(`^${category}$`, "i") },
     });
 
-    res.status(200).json({
+    res.status(200).json({ 
       success: true,
       count: products.length,
       products,
