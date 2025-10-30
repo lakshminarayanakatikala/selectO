@@ -15,6 +15,7 @@ const authMiddleware = require('../middleware/authMiddleware.js')
 const multer = require("multer");
 // const upload = multer({ dest: "uploads/" });
 const upload = require("../middleware/multer.js");
+const uploadExcel = require("../middleware/multerExcel.js");
 
 const productRoute = express.Router()
 
@@ -28,7 +29,12 @@ productRoute.post(
   addProduct
 );
 
-productRoute.post("/upload",authMiddleware, upload.single("file"), uploadProducts);
+productRoute.post(
+  "/upload",
+  authMiddleware,
+  uploadExcel.single("file"),
+  uploadProducts
+);
 
 productRoute.delete("/:id", authMiddleware ,deleteProduct );
 productRoute.put("/:id",authMiddleware , updateProduct);

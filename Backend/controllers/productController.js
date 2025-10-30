@@ -142,109 +142,9 @@ exports.getProducts = async (req, res) => {
 // };
 
 
-// exports.uploadProducts = async (req, res) => {
-//   try {
-//     if (!req.file) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "No file uploaded" });
-//     }
-
-//     const sellerId = req.seller._id;
-
-//     // Read Excel
-//     const workbook = XLSX.readFile(req.file.path);
-//     const sheetName = workbook.SheetNames[0];
-//     const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-
-//     const formattedData = [];
-
-//     for (const item of data) {
-//       const imageUrls = [];
-
-//       if (item.image) {
-//         // Split multiple URLs separated by commas
-//         const urls = item.image.split(",").map((url) => url.trim());
-
-//         for (let url of urls.slice(0, 4)) {
-//           try {
-//             // ✅ If already Cloudinary-hosted, keep it
-//             if (url.includes("res.cloudinary.com")) {
-//               imageUrls.push(url);
-//               continue;
-//             }
-
-//             // ✅ Download the image temporarily
-//             const response = await axios({
-//               url,
-//               responseType: "arraybuffer",
-//             });
-
-//             // Save to temporary file
-//             const tempPath = path.join(
-//               __dirname,
-//               `../temp/${Date.now()}-image.jpg`
-//             );
-//             fs.writeFileSync(tempPath, response.data);
-
-//             // ✅ Upload to Cloudinary
-//             const result = await cloudinary.uploader.upload(tempPath, {
-//               folder: "products",
-//             });
-
-//             imageUrls.push(result.secure_url);
-
-//             // Delete local temp file
-//             fs.unlinkSync(tempPath);
-//           } catch (err) {
-//             console.warn("⚠️ Failed to upload image:", url, err.message);
-//           }
-//         }
-//       }
-
-//       formattedData.push({
-//         sellerId,
-//         name: item.name,
-//         description: item.description || "",
-//         price: item.price || 0,
-//         quantitie: item.quantitie || 0,
-//         category: item.category || "Uncategorized",
-//         stock: item.stock ?? true,
-//         rating: item.rating || 0,
-//         image: imageUrls,
-//       });
-//     }
-
-//     // 🛠 Save products in DB
-//     const insertedProducts = await Product.insertMany(formattedData);
-
-//     // 🔗 Link them to seller
-//     const productIds = insertedProducts.map((p) => p._id);
-//     await Seller.findByIdAndUpdate(
-//       sellerId,
-//       { $push: { products: { $each: productIds } } },
-//       { new: true }
-//     );
-
-//     // Clean up Excel file
-//     fs.unlinkSync(req.file.path);
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Products uploaded successfully with Cloudinary image sync",
-//       count: insertedProducts.length,
-//     });
-//   } catch (error) {
-//     console.error("Upload error:", error);
-//     res
-//       .status(500)
-//       .json({ success: false, message: "Server error", error: error.message });
-//   }
-// };
-
 exports.uploadProducts = async (req, res) => {
   try {
-    // 🔹 1. Check file presence
+    // Check if file exists
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -255,109 +155,142 @@ exports.uploadProducts = async (req, res) => {
     const sellerId = req.seller._id;
     const filePath = req.file.path;
 
-    // 🔹 2. Read Excel file
+    // Read Excel file
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
     if (!data || data.length === 0) {
-      fs.unlinkSync(filePath);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       return res.status(400).json({
         success: false,
         message: "Uploaded Excel file is empty or invalid",
       });
     }
 
-    // Ensure temp folder exists
+    // Temporary folder path
     const tempDir = path.join(__dirname, "../temp");
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
-    const formattedData = [];
+    // Process all products concurrently
+    const formattedData = await Promise.all(
+      data.map(async (item) => {
+        try {
+          if (!item.name || !item.price) return null;
 
-    // 🔹 3. Process each product row
-    for (const item of data) {
-      if (!item.name || !item.price) continue;
+          const imageUrls = [];
 
-      const imageUrls = [];
-      if (item.image) {
-        const urls = item.image.split(",").map((url) => url.trim());
+          // If image column exists
+          if (item.image) {
+            const urls = item.image.split(",").map((url) => url.trim());
 
-        // Upload all image URLs concurrently
-        const uploadPromises = urls.slice(0, 4).map(async (url) => {
-          try {
-            // Already hosted on Cloudinary
-            if (url.includes("res.cloudinary.com")) return url;
+            // Upload all images concurrently (up to 4 per product)
+            const uploadResults = await Promise.allSettled(
+              urls.slice(0, 4).map(async (url) => {
+                try {
+                  // If already on Cloudinary, skip re-upload
+                  if (url.includes("res.cloudinary.com")) return url;
 
-            // Download image temporarily
-            const response = await axios({
-              url,
-              responseType: "arraybuffer",
-              timeout: 15000, // 15s timeout
+                  // Download image temporarily
+                  const response = await axios({
+                    url,
+                    responseType: "arraybuffer",
+                    timeout: 10000,
+                  });
+
+                  // Save temporarily
+                  const tempPath = path.join(
+                    tempDir,
+                    `${Date.now()}-${Math.random()}.jpg`
+                  );
+                  fs.writeFileSync(tempPath, response.data);
+
+                  // Upload to Cloudinary
+                  const result = await cloudinary.uploader.upload(tempPath, {
+                    folder: "products",
+                  });
+
+                  // Immediately delete the temp file (no local storage)
+                  try {
+                    fs.unlinkSync(tempPath);
+                  } catch (err) {
+                    console.warn(
+                      "Failed to delete temp image:",
+                      err.message
+                    );
+                  }
+
+                  return result.secure_url;
+                } catch (err) {
+                  console.warn("Image upload failed:", url, err.message);
+                  return null;
+                }
+              })
+            );
+
+            // Collect only successful uploads
+            uploadResults.forEach((res) => {
+              if (res.status === "fulfilled" && res.value) {
+                imageUrls.push(res.value);
+              }
             });
-
-            const tempPath = path.join(tempDir, `${Date.now()}-image.jpg`);
-            fs.writeFileSync(tempPath, response.data);
-
-            // Upload to Cloudinary
-            const result = await cloudinary.uploader.upload(tempPath, {
-              folder: "products",
-            });
-
-            // Delete temp file
-            fs.unlinkSync(tempPath);
-            return result.secure_url;
-          } catch (err) {
-            console.warn("⚠️ Failed to upload image:", url, err.message);
-            return null;
           }
-        });
 
-        const uploadedUrls = (await Promise.all(uploadPromises)).filter(
-          Boolean
-        );
-        imageUrls.push(...uploadedUrls);
-      }
-
-      formattedData.push({
-        sellerId,
-        name: item.name,
-        description: item.description || "",
-        price: Number(item.price) || 0,
-        quantitie: Number(item.quantitie) || 0,
-        category: item.category || "Uncategorized",
-        stock: item.stock ?? true,
-        rating: Number(item.rating) || 0,
-        image: imageUrls,
-      });
-    }
-
-    // 🔹 4. Save to MongoDB
-    const insertedProducts = await Product.insertMany(formattedData);
-
-    // 🔹 5. Link products to seller
-    const productIds = insertedProducts.map((p) => p._id);
-    await Seller.findByIdAndUpdate(
-      sellerId,
-      { $push: { products: { $each: productIds } } },
-      { new: true }
+          return {
+            sellerId,
+            name: item.name,
+            description: item.description || "",
+            price: Number(item.price) || 0,
+            quantitie: Number(item.quantitie) || 0,
+            category: item.category || "Uncategorized",
+            stock: item.stock ?? true,
+            rating: Number(item.rating) || 0,
+            image: imageUrls,
+          };
+        } catch (err) {
+          console.warn("Skipping product row:", err.message);
+          return null;
+        }
+      })
     );
 
-    // 🔹 6. Cleanup Excel file
-    fs.unlinkSync(filePath);
+    const validProducts = formattedData.filter(Boolean);
 
-    // 🔹 7. Send response
+    // Insert all valid products
+    const insertedProducts = await Product.insertMany(validProducts);
+
+    // Link products to seller
+    const productIds = insertedProducts.map((p) => p._id);
+    await Seller.findByIdAndUpdate(sellerId, {
+      $push: { products: { $each: productIds } },
+    });
+
+    // Delete uploaded Excel file too
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+        console.log("Excel file cleaned:", filePath);
+      } catch (err) {
+        console.warn("Failed to delete Excel:", err.message);
+      }
+    }
+
     res.status(200).json({
       success: true,
-      message: "Products uploaded successfully with Cloudinary image sync",
+      message: "Products uploaded successfully to Cloudinary",
       count: insertedProducts.length,
       products: insertedProducts,
     });
   } catch (error) {
-    console.error("❌ Upload error:", error);
+    console.error("Upload error:", error);
 
-    // Ensure Excel file cleanup if something fails
+    // Cleanup on error
     if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.warn("Cleanup on error failed:", err.message);
+      }
     }
 
     res.status(500).json({
