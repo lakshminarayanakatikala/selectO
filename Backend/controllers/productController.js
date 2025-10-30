@@ -561,11 +561,12 @@ exports.getSingleProduct = async (req, res) => {
   }
 };
 
+
+
 // get all  Categories for showing on the page
 exports.getAllCategories = async (req, res) => {
   try {
     const categories = await Product.distinct("category");
-
     res.status(200).json({
       success: true,
       count: categories.length,

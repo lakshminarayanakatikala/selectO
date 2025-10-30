@@ -6,51 +6,115 @@
     <title>API List</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: #f9fafb;
-            padding: 30px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #f7cac9 0%, #92a8d1 100%);
+            padding: 40px;
+            min-height: 100vh;
+            margin: 0;
         }
 
         h1 {
             text-align: center;
-            color: #333;
+            color: #371B58;
+            letter-spacing: 1.2px;
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            text-shadow: 0 2px 24px #fff6, 0 1px 0 #b199fc55;
         }
 
         table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background: #fff;
-            border-radius: 8px;
+            width: 90%;
+            max-width: 950px;
+            margin: 0 auto;
+            border-collapse: separate;
+            border-spacing: 0;
+            box-shadow: 0 8px 32px rgba(44, 43, 94, 0.17), 0 1.5px 16px rgba(255, 200, 124, 0.18);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 18px;
             overflow: hidden;
+            backdrop-filter: blur(2px);
+            transition: box-shadow 0.2s;
         }
 
         th,
         td {
-            padding: 12px 15px;
+            padding: 16px 20px;
             text-align: left;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #e0e7ff;
+            font-size: 1.08rem;
+            transition: background 0.15s;
         }
 
         th {
-            background: #f3f4f6;
+            background: linear-gradient(90deg, #adacf3 60%);
+            color: #21092c;
+            font-size: 1.13rem;
+            font-weight: 570;
+            letter-spacing: 0.4px;
+            border-bottom: 3px solid #371B58;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
         }
 
         tr:hover {
-            background: #f1f5f9;
+            background: linear-gradient(90deg, #ffe29a 15%, #edf4ff 100%);
+            box-shadow: 0 2px 24px rgba(171, 71, 188, 0.09);
+            cursor: pointer;
+            transition: background 0.24s;
+        }
+
+        td strong {
+            font-weight: bold;
+            color: #6f14ed;
+            background: linear-gradient(90deg, #f9ce34 40%, #ee2a7b 70%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.3px;
         }
 
         code {
-            background: #f1f5f9;
-            padding: 2px 5px;
-            border-radius: 4px;
+            background: #f6f8fa;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-family: 'Fira Mono', 'Consolas', monospace;
+            font-size: 1rem;
+            color: #4900c8;
+            border: 1px solid #ebebfd;
+            transition: background 0.14s, box-shadow 0.12s;
+        }
+
+        td code:hover {
+            background: #e8ddfa;
+            box-shadow: 0 0 4px 0 #bc6ff1;
+            color: #4d1c94;
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 10px;
+            }
+
+            table {
+                width: 100%;
+                font-size: 0.95rem;
+            }
+
+            th,
+            td {
+                padding: 10px 8px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
 
 <body>
     <h1>API Endpoints</h1>
-
     <table>
         <thead>
             <tr>
