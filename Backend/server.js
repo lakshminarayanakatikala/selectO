@@ -15,6 +15,7 @@ const cartRoutes = require("./routes/cartRoutes");
 const {apiList} = require('./views/apis.js');
 const showProductsRoute = require("./routes/showProducts.js");
 const categoryRouter  = require("./routes/categoryRoutes.js");
+const searchRouter = require("./routes/searchRoutes.js");
 
 const app = express();
 const port = process.env.PORT;   
@@ -38,6 +39,10 @@ app.use("/api/seller/orders", orderRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/apis" , showProductsRoute)
+
+// search functionality
+
+app.use('/api/search',searchRouter)
 
 //admin middlewares
 app.use('/api/admin' , categoryRouter)
