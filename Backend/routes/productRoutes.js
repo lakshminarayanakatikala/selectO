@@ -10,6 +10,8 @@ const {
   restoreOriginalPrices,
   applyCategoryDiscount,
   removeCategoryDiscount,
+  toggleBestSelling,
+  getBestSellingProducts,
 } = require("../controllers/productController.js");
 const authMiddleware = require('../middleware/authMiddleware.js')
 const multer = require("multer");
@@ -47,6 +49,10 @@ productRoute.patch("/restore-prices", authMiddleware, restoreOriginalPrices);
 // Category-wise discount
 productRoute.patch("/category/discount", authMiddleware, applyCategoryDiscount);
 productRoute.patch("/category/remove-discount", authMiddleware, removeCategoryDiscount);
+
+// best selling 
+productRoute.post("/best-selling", authMiddleware, toggleBestSelling);
+productRoute.get("/best-selling", getBestSellingProducts);
 
 
 module.exports = productRoute

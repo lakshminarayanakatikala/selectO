@@ -780,3 +780,55 @@ exports.getBachelorFilterProducts = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+
+
+// toggle to best selling 
+
+exports.toggleBestSelling = async (req, res) => {
+  try {
+    const sellerId = req.seller._id;
+    const { productId, isBestSelling } = req.body;
+
+    const product = await Product.findOne({ _id: productId, sellerId });
+
+    if (!product) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
+    }
+
+    product.isBestSelling = isBestSelling;
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: isBestSelling
+        ? "Product marked as Best Selling"
+        : "Product removed from Best Selling",
+      product,
+    });
+  } catch (error) {
+    console.error("Error updating best selling:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// get best selling product
+
+exports.getBestSellingProducts = async (req, res) => {
+  try {
+    const products = await Product.find({ isBestSelling: true })
+      .populate("sellerId", "shopName address") // get shop name and address
+      .limit(20);
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products,
+    });
+  } catch (error) {
+    console.error("Error fetching best sellers:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};

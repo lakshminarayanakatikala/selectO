@@ -21,10 +21,10 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    originalPrice: { type: Number , default :0}, // store price before discount
-    sellerDiscount:{
-      type : Number,
-      default : 0
+    originalPrice: { type: Number, default: 0 }, // store price before discount
+    sellerDiscount: {
+      type: Number,
+      default: 0,
     },
     isDiscounted: { type: Boolean, default: false }, // indicates offer active
     rating: {
@@ -51,6 +51,7 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isBestSelling: { type: Boolean, default: false },
     createdAt: {
       type: Date,
       default: Date.now,
