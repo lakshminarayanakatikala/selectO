@@ -213,3 +213,21 @@ exports.getNearbySellers = async (req, res) => {
 };
 
 
+
+
+exports.getSellersByCategory = async (req, res) => {
+  try {
+    const { category } = req.params;
+
+    // Find all products in this category
+    const sellers = await Product.find({ category })
+      .populate("sellerId", "shopName location shopImage")
+      .distinct("sellerId");
+
+    const sellerDetails = await Seller.find({ _id: { $in: sellers } });
+
+    res.status(200).json({ success: true, sellers: sellerDetails });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
