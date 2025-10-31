@@ -53,7 +53,16 @@ const fs = require("fs");
 
 exports.registerSeller = async (req, res) => {
   try {
-    const { name, email, password, shopName, address, phone } = req.body;
+    const {
+      name,
+      email,
+      password,
+      shopName,
+      address,
+      phone,
+      latitude,
+      longitude,
+    } = req.body;
 
     // Check if seller already exists
     const existingSeller = await Seller.findOne({
@@ -83,6 +92,14 @@ exports.registerSeller = async (req, res) => {
       // remove local temp file
       fs.unlinkSync(req.file.path);
     }
+    // Handle location
+    let locationData = {
+      type: "Point",
+      coordinates: [0, 0], // default
+    };
+    if (latitude && longitude) {
+      locationData.coordinates = [parseFloat(longitude), parseFloat(latitude)];
+    }
 
     // Create new seller
     const newSeller = new Seller({
@@ -92,6 +109,7 @@ exports.registerSeller = async (req, res) => {
       shopName,
       address,
       phone,
+      location: locationData,
       shopImage,
       adminApproval: true, // default
     });
@@ -106,6 +124,8 @@ exports.registerSeller = async (req, res) => {
         email: newSeller.email,
         phone: newSeller.phone,
         shopName: newSeller.shopName,
+        address:newSeller.address,
+        location: newSeller.location,
         shopImage: newSeller.shopImage,
       },
     });

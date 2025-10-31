@@ -1,7 +1,7 @@
 const dotenv = require("dotenv"); 
 dotenv.config(); 
 const connectDB = require("./db/db.js")
-require("./jobs/stockChecker.js"); // starts the cron job automatically
+// require("./jobs/stockChecker.js"); // starts the cron job automatically
 
 connectDB();
 const express = require("express");
@@ -10,7 +10,7 @@ const productRoute = require("./routes/productRoutes.js")
 const sellerAuthRoutes = require("./routes/sellerAuthRoutes.js")
 const orderRoutes = require("./routes/orderRoutes.js")
 const userRoutes = require("./routes/userRoutes.js")
-const notificationRoutes = require("./routes/notificationRoutes");
+// const notificationRoutes = require("./routes/notificationRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const {apiList} = require('./views/apis.js');
 const showProductsRoute = require("./routes/showProducts.js");
@@ -32,7 +32,7 @@ app.use(express.urlencoded({extended : true}))
 app.use("/api/seller/products" , productRoute );
 app.use("/api/seller/auth", sellerAuthRoutes);
 app.use("/api/seller/orders", orderRoutes);
-app.use("/api/notifications", notificationRoutes);
+// app.use("/api/notifications", notificationRoutes);
 
 //user middlewares   
 app.use("/api/user", userRoutes);
