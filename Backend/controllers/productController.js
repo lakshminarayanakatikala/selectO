@@ -38,6 +38,7 @@ exports.addProduct = async (req, res) => {
           folder: "products",
         });
         uploadedImages.push(result.secure_url);
+        fs.unlinkSync(file.path);
       }
     }
 

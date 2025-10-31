@@ -1,7 +1,11 @@
 const express = require("express");
 const userRoutes = express.Router();
-const { registerUser, loginUser  } = require("../controllers/userController");
-const {getSingleProduct, getAllCategories, getProductsByCategory, getAllProducts, getExclusiveOffers, getBachelorFilterProducts} = require("../controllers/productController")
+const {
+  registerUser,
+  loginUser,
+  getNearbySellers,
+} = require("../controllers/userController");
+const {getSingleProduct, getAllCategories, getProductsByCategory, getAllProducts, getExclusiveOffers, getBachelorFilterProducts } = require("../controllers/productController")
 const userAuthMiddleware = require("../middleware/userAuthMiddleware");
 const { toggleFavorite, getFavorites } = require("../controllers/favoriteController");
 
@@ -22,6 +26,9 @@ userRoutes.get("/singleproduct/:id", getSingleProduct);
 // Get all products
 userRoutes.get("/products", getAllProducts);
 userRoutes.get("/products/offers/exclusive", getExclusiveOffers);
+
+// get near by sellers 
+userRoutes.use("/nearbyseller", getNearbySellers);
 
 
 userRoutes.get("/categories", getAllCategories);

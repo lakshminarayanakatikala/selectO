@@ -182,3 +182,34 @@ exports.getSellerProductsByCategory = async (req, res) => {
   }
 };
 
+
+// get near by sellers 
+
+exports.getNearbySellers = async (req, res) => {
+  try {
+    const { latitude, longitude, maxDistance = 5000 } = req.query; // in meters
+
+    const sellers = await Seller.find({
+      location: {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [parseFloat(longitude), parseFloat(latitude)],
+          },
+          $maxDistance: parseFloat(maxDistance),
+        },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      count: sellers.length,
+      sellers,
+    });
+  } catch (error) {
+    console.error("Error fetching nearby sellers:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+

@@ -25,15 +25,30 @@ const sellerSchema = new mongoose.Schema(
     shopImage: {
       type: String, // Cloudinary URL
       default: "", // in case image not uploaded
-      required:true
-    },
-    address: {
-      type: String,
       required: true,
     },
+    // address: {
+    //   type: String,
+    //   required: true,
+    // },
     phone: {
       type: String,
       required: true,
+    },
+    address: {
+      type: String, // readable address (manual or reverse-geocoded)
+      required: true,
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+      },
     },
     products: [
       // this was helpful for example count the totatl product of the seller
