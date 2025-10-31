@@ -14,7 +14,7 @@ exports.addProduct = async (req, res) => {
     const { name, description, price, rating, quantitie, category } = req.body;
 
     // Validation
-    if (!name || !description || !price  || !category) {
+    if (!name || !description || !price || !category) {
       return res
         .status(400)
         .json({ success: false, message: "All fields are required" });
@@ -25,12 +25,10 @@ exports.addProduct = async (req, res) => {
 
     if (req.files && req.files.length > 0) {
       if (req.files.length > 4) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "You can upload up to 4 images only",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "You can upload up to 4 images only",
+        });
       }
 
       for (const file of req.files) {
@@ -54,6 +52,20 @@ exports.addProduct = async (req, res) => {
     });
 
     await newProduct.save();
+
+    // Normalize category name (case-insensitive)
+    const normalizedCategory = category.trim().toLowerCase();
+
+    // Update seller's category list uniquely (case-insensitive)
+    const seller = await Seller.findById(sellerId);
+
+    if (seller) {
+      const existingCategories = seller.categories.map((c) => c.toLowerCase());
+      if (!existingCategories.includes(normalizedCategory)) {
+        seller.categories.push(category.trim());
+        await seller.save();
+      }
+    }
 
     res.status(201).json({
       success: true,
