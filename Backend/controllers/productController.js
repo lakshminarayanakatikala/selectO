@@ -759,7 +759,7 @@ exports.getBachelorFilterProducts = async (req, res) => {
     }
 
     const products = await Product.find(filter)
-      .populate("sellerId", "shopName address phone")
+      .populate("sellerId", "shopName address phone shopImage")
       .sort({ price: 1 }); // Sort cheapest first
 
     if (products.length === 0) {

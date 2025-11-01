@@ -6,6 +6,7 @@ const connectDB = require("./db/db.js")
 connectDB();
 const express = require("express");
 const path = require("path")
+const cors = require('cors')
 const productRoute = require("./routes/productRoutes.js")
 const sellerAuthRoutes = require("./routes/sellerAuthRoutes.js")
 const orderRoutes = require("./routes/orderRoutes.js")
@@ -25,6 +26,7 @@ app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
  
 // Middlewares
+app.use(cors())
 app.use(express.json());   
 app.use(express.urlencoded({extended : true}))
 
@@ -38,7 +40,7 @@ app.use("/api/seller/orders", orderRoutes);
 //user middlewares   
 app.use("/api/user", userRoutes);
 app.use("/api/cart", cartRoutes);
-app.use("/apis" , showProductsRoute);
+app.use("/apis" , showProductsRoute)
 
 // search functionality
 
