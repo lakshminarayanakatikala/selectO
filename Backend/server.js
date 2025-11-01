@@ -38,7 +38,7 @@ app.use("/api/seller/orders", orderRoutes);
 //user middlewares   
 app.use("/api/user", userRoutes);
 app.use("/api/cart", cartRoutes);
-app.use("/apis" , showProductsRoute)
+app.use("/apis" , showProductsRoute);
 
 // search functionality
 
