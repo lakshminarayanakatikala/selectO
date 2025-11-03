@@ -638,9 +638,37 @@ exports.getSingleProduct = async (req, res) => {
 
 
 // get all  Categories for showing on the page
+// exports.getAllCategories = async (req, res) => {
+//   try {
+//     const categories = await Product.distinct("category");
+//     res.status(200).json({
+//       success: true,
+//       count: categories.length,
+//       categories,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching categories:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
+// get all or searched categories
 exports.getAllCategories = async (req, res) => {
   try {
-    const categories = await Product.distinct("category");
+    const { search } = req.query; // example: ?search=f
+
+    let categories;
+
+    if (search) {
+      //case-insensitive partial match
+      categories = await Product.distinct("category", {
+        category: { $regex: search, $options: "i" },
+      });
+    } else {
+      //if no search, show all
+      categories = await Product.distinct("category");
+    }
+
     res.status(200).json({
       success: true,
       count: categories.length,
@@ -651,6 +679,7 @@ exports.getAllCategories = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 
 

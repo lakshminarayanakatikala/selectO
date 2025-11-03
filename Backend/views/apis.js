@@ -125,7 +125,11 @@ exports.apiList = [
     path: "/api/user/products/offers/exclusive",
     desc: "Get exclusive offers based on discount",
   },
-  { method: "GET", path: "/api/user/categories", desc: "Get all categories" },
+  {
+    method: "GET",
+    path: "/api/user/categories?search=fruits",
+    desc: "Get all categories query is optional",
+  },
   {
     method: "GET",
     path: "/api/user/category/:category",
@@ -160,11 +164,6 @@ exports.apiList = [
   },
   {
     method: "GET",
-    path: "/apis/:sellerId/products",
-    desc: "show the seller products",
-  },
-  {
-    method: "GET",
     path: "/apis/:sellerId/categories",
     desc: "show the particular seller categories ",
   },
@@ -182,5 +181,15 @@ exports.apiList = [
     method: "POST",
     path: "/api/seller/products/best-selling",
     desc: "add and remove the best-selling products in list",
+  },
+  {
+    method: "GET",
+    path: "/api/search/seller/:sellerId/search?query=apple",
+    desc: "search the products for same seller it also helpful for suggitions",
+  },
+  {
+    method: "GET",
+    path: "/api/seller/products/:productId/relevant",
+    desc: "get relevent products of the seller",
   },
 ];
