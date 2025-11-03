@@ -134,10 +134,11 @@ exports.createOrder = async (req, res) => {
 
     // Create individual orders per seller
     const createdOrders = [];
+     let grandTotal = 0;
 
     for (const [sellerId, sellerItems] of Object.entries(groupedBySeller)) {
       const totalPrice = sellerItems.reduce((sum, i) => sum + i.subtotal, 0);
-
+      grandTotal += totalPrice
       const newOrder = new Order({
         userId,
         items: sellerItems,
@@ -157,6 +158,7 @@ exports.createOrder = async (req, res) => {
       success: true,
       message: "Order placed successfully",
       orders: createdOrders,
+      totalPrice: grandTotal
     });
   } catch (error) {
     console.error("Order creation failed:", error);
