@@ -173,4 +173,14 @@ exports.apiList = [
     path: "/sellers/:sellerId/products/:category",
     desc: "show the particular categories like veg ,fruits",
   },
+  {
+    method: "GET",
+    path: "/api/seller/products/best-selling",
+    desc: "get the best selling products",
+  },
+  {
+    method: "POST",
+    path: "/api/seller/products/best-selling",
+    desc: "add and remove the best-selling products in list",
+  },
 ];
