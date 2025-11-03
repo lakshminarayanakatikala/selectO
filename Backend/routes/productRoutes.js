@@ -12,6 +12,7 @@ const {
   removeCategoryDiscount,
   toggleBestSelling,
   getBestSellingProducts,
+  getRelevantProducts,
 } = require("../controllers/productController.js");
 const authMiddleware = require('../middleware/authMiddleware.js')
 const multer = require("multer");
@@ -53,6 +54,10 @@ productRoute.patch("/category/remove-discount", authMiddleware, removeCategoryDi
 // best selling 
 productRoute.post("/best-selling", authMiddleware, toggleBestSelling);
 productRoute.get("/best-selling", getBestSellingProducts);
+
+// get relavent products 
+productRoute.get("/:productId/relevant", getRelevantProducts);
+
 
 
 module.exports = productRoute

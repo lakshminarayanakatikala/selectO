@@ -832,3 +832,49 @@ exports.getBestSellingProducts = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+
+
+
+// Get relevant products (same seller + same category)
+exports.getRelevantProducts = async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    // Find the main product
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // Find related products from the same seller & same category
+    const relevantProducts = await Product.find({
+      _id: { $ne: product._id }, // exclude current product
+      sellerId: product.sellerId, // same seller only
+      category: { $regex: new RegExp(`^${product.category}$`, "i") }, // same category (case-insensitive)
+    })
+      .populate("sellerId", "shopName") // optional: show shop name
+      .limit(10); // limit to avoid overfetching
+
+    // Respond
+    res.status(200).json({
+      success: true,
+      message: "Relevant products fetched successfully",
+      product: {
+        id: product._id,
+        name: product.name,
+        category: product.category,
+        seller: product.sellerId,
+      },
+      relevantProducts,
+    });
+  } catch (error) {
+    console.error("Error fetching relevant products:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
