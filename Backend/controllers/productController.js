@@ -614,7 +614,7 @@ exports.getSingleProduct = async (req, res) => {
       "sellerId",
       "shopName address phone"
     );
-
+ 
     if (!product) {
       return res.status(404).json({
         success: false,

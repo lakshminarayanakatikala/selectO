@@ -116,7 +116,9 @@ exports.loginUser = async (req, res) => {
 // GET /api/sellers
 exports.getAllSellers = async (req, res) => {
   try {
-    const sellers = await Seller.find().select("shopName address phone isOnline");
+    const sellers = await Seller.find().select(
+      "shopName address phone shopImage location isOnline adminApproval"
+    );
     res.status(200).json({ success: true, sellers });
   } catch (error) {
     res.status(500).json({ success: false, message: "Server error" });
@@ -213,21 +215,76 @@ exports.getNearbySellers = async (req, res) => {
 };
 
 
+// exports.getSellersByCategory = async (req, res) => {
+//   try {
+//     const { category } = req.params;
 
+//     // Find all products in this category
+//     const sellers = await Product.find({ category })
+//       .populate("sellerId", "shopName location shopImage")
+//       .distinct("sellerId");
+
+//     const sellerDetails = await Seller.find({ _id: { $in: sellers } });
+
+//     res.status(200).json({ success: true, sellers: sellerDetails });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
 
 exports.getSellersByCategory = async (req, res) => {
   try {
     const { category } = req.params;
 
-    // Find all products in this category
-    const sellers = await Product.find({ category })
+    //  Find all products in this category and populate seller info
+    const products = await Product.find({ category })
       .populate("sellerId", "shopName location shopImage")
-      .distinct("sellerId");
+      .lean();
 
-    const sellerDetails = await Seller.find({ _id: { $in: sellers } });
+    if (!products || products.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No sellers or products found for this category",
+      });
+    }
 
-    res.status(200).json({ success: true, sellers: sellerDetails });
+    //  Extract unique sellers
+    const uniqueSellersMap = new Map();
+    products.forEach((product) => {
+      if (!uniqueSellersMap.has(product.sellerId._id.toString())) {
+        uniqueSellersMap.set(product.sellerId._id.toString(), {
+          _id: product.sellerId._id,
+          shopName: product.sellerId.shopName,
+          location: product.sellerId.location,
+          shopImage: product.sellerId.shopImage,
+          products: [],
+        });
+      }
+      // Add product to this seller’s product list
+      uniqueSellersMap.get(product.sellerId._id.toString()).products.push({
+        _id: product._id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        description: product.description,
+      });
+    });
+
+    const sellersWithProducts = Array.from(uniqueSellersMap.values());
+
+    // Response
+    res.status(200).json({
+      success: true,
+      count: sellersWithProducts.length,
+      category,
+      sellers: sellersWithProducts,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Error fetching sellers by category:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
+
