@@ -192,4 +192,9 @@ exports.apiList = [
     path: "/api/seller/products/:productId/relevant",
     desc: "get relevent products of the seller",
   },
+  {
+    method: "GET",
+    path: "/apis/seller-page/:sellerId?category=Fruits",
+    desc: "seller main page with categories",
+  },
 ];
