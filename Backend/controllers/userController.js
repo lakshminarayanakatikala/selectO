@@ -1,6 +1,7 @@
 const User = require("../models/UserModel");
 const Seller = require("../models/SellerModel");
 const Product = require("../models/ProductModel")
+const Category = require("../models/CategoryModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -238,7 +239,7 @@ exports.getSellersByCategory = async (req, res) => {
 
     //  Find all products in this category and populate seller info
     const products = await Product.find({ category })
-      .populate("sellerId", "shopName location shopImage")
+      .populate("sellerId", "shopName location shopImage address phone") //shopName shopImage address phone location description
       .lean();
 
     if (!products || products.length === 0) {
@@ -255,6 +256,8 @@ exports.getSellersByCategory = async (req, res) => {
         uniqueSellersMap.set(product.sellerId._id.toString(), {
           _id: product.sellerId._id,
           shopName: product.sellerId.shopName,
+          address: product.sellerId.address, //  added address here
+          phone: product.sellerId.phone,
           location: product.sellerId.location,
           shopImage: product.sellerId.shopImage,
           products: [],
@@ -308,6 +311,20 @@ exports.getSellerMainPage = async (req, res) => {
     }
 
     const categories = await Product.distinct("category", { sellerId });
+    // Get images for each category
+    const allCategories = await Category.find({}, "name image");
+    const categoriesWithImages = categories.map((cat) => {
+      const matched = allCategories.find(
+        (c) => c.name.toLowerCase() === cat.toLowerCase()
+      );
+      return {
+        name: cat,
+        image: matched
+          ? matched.image
+          : "https://res.cloudinary.com/demo/image/upload/v1/default.jpg",
+      };
+    });
+
 
     let selectedCategory = category || categories[0];
     const products = await Product.find({
@@ -319,6 +336,7 @@ exports.getSellerMainPage = async (req, res) => {
       success: true,
       seller,
       categories,
+      category_img: categoriesWithImages,
       selectedCategory,
       products,
     });
