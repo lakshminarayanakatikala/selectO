@@ -440,7 +440,7 @@ exports.applyDiscountToAllProducts = async (req, res) => {
         
         const discountedPrice =  product.originalPrice - (product.originalPrice * discountPercentage) / 100;
 
-        product.price = Math.round(discountedPrice * 100) / 100;
+        product.price = Math.round(discountedPrice); // Math.round(discountedPrice * 100) / 100;
         product.isDiscounted = true;
         product.sellerDiscount = discountPercentage;
         await product.save();
@@ -539,7 +539,7 @@ exports.applyCategoryDiscount = async (req, res) => {
       const discountedPrice =
         product.originalPrice - (product.originalPrice * discountPercentage) / 100;
 
-      product.price = Math.round(discountedPrice * 100) / 100;
+      product.price = Math.round(discountedPrice); //Math.round(discountedPrice * 100) / 100;
       product.isDiscounted = true;
       product.sellerDiscount = discountPercentage;
       await product.save();

@@ -7,6 +7,7 @@ const {
   getSellerCategories,
   getSellerProducts,
   getSellersByCategory,
+  getSellerMainPage,
 } = require("../controllers/userController");
 
 // need to show sellers , seller products and categories
@@ -20,6 +21,9 @@ showProductsRoute.get("/sellers/:sellerId/products/:category",getSellerProductsB
 //updated routes 
 
 showProductsRoute.get("/category/:category/sellers", getSellersByCategory); // sellers for category
+
+// seller main page api
+showProductsRoute.get("/seller-page/:sellerId", getSellerMainPage);
 
 
 module.exports = showProductsRoute;

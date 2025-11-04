@@ -288,3 +288,44 @@ exports.getSellersByCategory = async (req, res) => {
   }
 };
 
+
+// GET /api/seller-page/:sellerId
+// Optional query ?category=Fruits
+exports.getSellerMainPage = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    const { category } = req.query;
+
+    const seller = await Seller.findById(sellerId).select(
+      "shopName shopImage address phone location description"
+    );
+
+    if (!seller) {
+      return res.status(404).json({
+        success: false,
+        message: "Seller not found",
+      });
+    }
+
+    const categories = await Product.distinct("category", { sellerId });
+
+    let selectedCategory = category || categories[0];
+    const products = await Product.find({
+      sellerId,
+      category: { $regex: new RegExp(`^${selectedCategory}$`, "i") },
+    });
+
+    res.status(200).json({
+      success: true,
+      seller,
+      categories,
+      selectedCategory,
+      products,
+    });
+  } catch (error) {
+    console.error("Error fetching seller page:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+

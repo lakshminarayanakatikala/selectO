@@ -1,5 +1,6 @@
 const Cart = require("../models/cartModel");
 const Product = require("../models/ProductModel");
+const User = require("../models/UserModel");
 
 //  Add or update multiple items in cart
 exports.addToCart = async (req, res) => {
@@ -118,24 +119,28 @@ exports.getCart = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    let cart = await Cart.findOne({ userId })
-    .populate( 
-      "items.productId",
-      "name price image category quantity"
-    );
+    // Populate product + seller info
+    let cart = await Cart.findOne({ userId }).populate({
+      path: "items.productId",
+      select: "name price image category quantity sellerId",
+      populate: {
+        path: "sellerId",
+        select: "shopName shopImage address phone isOnline",
+      },
+    });
 
     if (!cart) {
       return res.status(200).json({
         success: true,
         message: "Empty cart",
-        cart: { items: [], totalPrice: 0 },
+        cart: { sellers: [], totalPrice: 0 },
       });
     }
 
     let updated = false;
     let totalPrice = 0;
 
-    // Update item prices and calculate total per item
+    // Recalculate prices
     const itemsWithTotal = cart.items.map((item) => {
       if (item.productId && item.price !== item.productId.price) {
         item.price = item.productId.price;
@@ -146,8 +151,8 @@ exports.getCart = async (req, res) => {
       totalPrice += itemTotal;
 
       return {
-        ...item._doc, // include other item fields
-        total: itemTotal, // individual item total
+        ...item._doc,
+        total: itemTotal,
       };
     });
 
@@ -159,14 +164,103 @@ exports.getCart = async (req, res) => {
       cart.totalPrice = totalPrice;
     }
 
-    res
-      .status(200)
-      .json({ success: true, cart: { items: itemsWithTotal, totalPrice } });
+    // 🧠 Group items by seller
+    const groupedBySeller = {};
+
+    for (const item of itemsWithTotal) {
+      const product = item.productId;
+      if (!product || !product.sellerId) continue;
+
+      const sellerId = product.sellerId._id.toString();
+
+      if (!groupedBySeller[sellerId]) {
+        groupedBySeller[sellerId] = {
+          sellerId,
+          shopName: product.sellerId.shopName,
+          shopImage: product.sellerId.shopImage,
+          address: product.sellerId.address,
+          phone: product.sellerId.phone,
+          isOnline: product.sellerId.isOnline,
+          items: [],
+          sellerTotal: 0,
+        };
+      }
+
+      groupedBySeller[sellerId].items.push(item);
+      groupedBySeller[sellerId].sellerTotal += item.total;
+    }
+
+    // Convert object → array
+    const sellers = Object.values(groupedBySeller);
+
+    res.status(200).json({
+      success: true,
+      cart: {
+        sellers, // grouped by shop
+        totalPrice,
+      },
+    });
   } catch (error) {
     console.error("Error fetching cart:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+
+
+// exports.getCart = async (req, res) => {
+//   try {
+//     const userId = req.user._id;
+
+//     let cart = await Cart.findOne({ userId })
+//     .populate( 
+//       "items.productId",
+//       "name price image category quantity"
+//     );
+
+//     if (!cart) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "Empty cart",
+//         cart: { items: [], totalPrice: 0 },
+//       });
+//     }
+
+//     let updated = false;
+//     let totalPrice = 0;
+
+//     // Update item prices and calculate total per item
+//     const itemsWithTotal = cart.items.map((item) => {
+//       if (item.productId && item.price !== item.productId.price) {
+//         item.price = item.productId.price;
+//         updated = true;
+//       }
+
+//       const itemTotal = item.price * item.quantity;
+//       totalPrice += itemTotal;
+
+//       return {
+//         ...item._doc, // include other item fields
+//         total: itemTotal, // individual item total
+//       };
+//     });
+
+//     if (updated) {
+//       cart.items = itemsWithTotal;
+//       cart.totalPrice = totalPrice;
+//       await cart.save();
+//     } else {
+//       cart.totalPrice = totalPrice;
+//     }
+
+//     res
+//       .status(200)
+//       .json({ success: true, cart: { items: itemsWithTotal, totalPrice } });
+//   } catch (error) {
+//     console.error("Error fetching cart:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
 
 
 //  Remove specific product
@@ -218,3 +312,77 @@ exports.clearCart = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+
+
+exports.addAllFavoritesToCart = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // ✅ Get user and populate favorites
+    const user = await User.findById(userId).populate("favorites");
+
+    if (!user || user.favorites.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No favorite products found",
+      });
+    }
+
+    let cart = await Cart.findOne({ userId });
+    if (!cart) {
+      cart = new Cart({ userId, items: [], totalPrice: 0 });
+    }
+
+    let addedCount = 0;
+
+    for (const product of user.favorites) {
+      if (!product) continue;
+
+      // Check stock (if you store it as product.stock or product.quantity)
+      if (product.stock !== undefined && product.stock <= 0) continue;
+
+      // 🔍 Find if product already exists in the cart
+      const existingItem = cart.items.find(
+        (item) => item.productId.toString() === product._id.toString()
+      );
+
+      if (existingItem) {
+        // ✅ Increase quantity, do not replace
+        existingItem.quantity += 1;
+      } else {
+        // ✅ Add new product to cart
+        cart.items.push({
+          productId: product._id,
+          quantity: 1,
+          price: product.price,
+        });
+      }
+
+      addedCount++;
+    }
+
+    // 🧮 Recalculate total price once
+    cart.totalPrice = cart.items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+
+    await cart.save();
+
+    // 🧹 Clear favorites after adding successfully
+    user.favorites = [];
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Added ${addedCount} favorite products to cart (existing items incremented) and cleared favorites.`,
+      cart,
+    });
+  } catch (error) {
+    console.error("Error adding all favorites to cart:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+

@@ -6,6 +6,7 @@ const {
   removeFromCart,
   clearCart,
   decreaseCartItem,
+  addAllFavoritesToCart,
 } = require("../controllers/cartController");
 const userAuthMiddleware = require("../middleware/userAuthMiddleware");
 
@@ -16,5 +17,6 @@ cartRouter.post("/remove", userAuthMiddleware, decreaseCartItem);
 cartRouter.get("/", userAuthMiddleware, getCart);
 cartRouter.delete("/delete", userAuthMiddleware, removeFromCart);
 cartRouter.delete("/clear", userAuthMiddleware, clearCart);
+cartRouter.post("/favorites/add-all-to-cart", userAuthMiddleware, addAllFavoritesToCart);
 
 module.exports = cartRouter;
