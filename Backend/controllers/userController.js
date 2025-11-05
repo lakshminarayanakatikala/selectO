@@ -5,52 +5,337 @@ const Category = require("../models/CategoryModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+const Otp = require("../models/OtpModel");
+const twilioClient = require("twilio")(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+
+
 //  Helper function to create token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET);
 };
 
-//  Register user
-exports.registerUser = async (req, res) => {
+// //  Register user
+// exports.registerUser = async (req, res) => {
+//   try {
+//     const { name, email, phone, password, confirmPassword } = req.body;
+
+//     // Validate fields
+//     if (!name || !email || !phone || !password || !confirmPassword) {
+//       return res.status(400).json({ message: "All fields are required" });
+//     }
+
+//     // Password confirmation
+//     if (password !== confirmPassword) {
+//       return res.status(400).json({ message: "Passwords do not match" });
+//     }
+
+//     // Check for existing user
+//     const existingUser = await User.findOne({
+//       $or: [{ email }, { phone }],
+//     });
+
+//     if (existingUser) {
+//       return res
+//         .status(400)
+//         .json({ message: "User already exists with this email or phone" });
+//     }
+
+//     // Hash password manually
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     // Create new user
+//     const user = new User({
+//       name,
+//       email,
+//       phone,
+//       password: hashedPassword,
+//     });
+
+//     await user.save();
+
+//     // Generate token (auto login after registration)
+//     const token = generateToken(user._id);
+
+//     res.status(201).json({
+//       success: true,
+//       message: "User registered successfully",
+//       token,
+//       user: {
+//         id: user._id,
+//         name: user.name,
+//         email: user.email,
+//         phone: user.phone,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Register Error:", error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+// //  Login user (email or phone)
+// exports.loginUser = async (req, res) => {
+//   try {
+//     const { identifier, password } = req.body; // identifier = email or phone
+
+//     if (!identifier || !password) {
+//       return res.status(400).json({ message: "All fields are required" });
+//     }
+
+//     const user = await User.findOne({
+//       $or: [{ email: identifier }, { phone: identifier }],
+//     });
+
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     // Compare password manually
+//     const isMatch = await bcrypt.compare(password, user.password);
+
+//     if (!isMatch) {
+//       return res.status(401).json({ message: "Invalid credentials" });
+//     }
+
+//     // Generate token
+//     const token = generateToken(user._id);
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Login successful",
+//       token,
+//       user: {
+//         id: user._id,
+//         name: user.name,
+//         email: user.email,
+//         phone: user.phone,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Login Error:", error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
+
+
+
+/* ---------------------- SEND OTP ---------------------- */
+exports.sendOtp = async (req, res) => {
   try {
-    const { name, email, phone, password, confirmPassword } = req.body;
+    let { phone } = req.body;
 
-    // Validate fields
-    if (!name || !email || !phone || !password || !confirmPassword) {
-      return res.status(400).json({ message: "All fields are required" });
+    if (!phone) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Phone number required" });
     }
 
-    // Password confirmation
-    if (password !== confirmPassword) {
-      return res.status(400).json({ message: "Passwords do not match" });
+    if (!phone.startsWith("+") && phone.length === 10) {
+      phone = `+91${phone}`;
     }
 
-    // Check for existing user
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store OTP
+    await Otp.findOneAndUpdate(
+      { phone },
+      { otp, createdAt: Date.now() },
+      { upsert: true, new: true }
+    );
+
+    const isProd = process.env.NODE_ENV === "production";
+
+    if (isProd) {
+      await twilioClient.messages.create({
+        body: `Your Selecto verification code is ${otp}. It expires in 5 minutes.`,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: phone,
+      });
+    } else {
+      console.log("DEV MODE: OTP =", otp);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "OTP sent successfully",
+      phone,
+      ...(process.env.NODE_ENV !== "production" && { otp }), // dev only
+    });
+  } catch (error) {
+    console.error("Send OTP error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+/* ---------------------- VERIFY OTP ---------------------- */
+exports.verifyOtp = async (req, res) => {
+  try {
+    let { phone, otp } = req.body;
+
+    if (!phone || !otp) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Phone and OTP required" });
+    }
+
+    // Normalize phone number
+    let formattedPhone = phone;
+    if (!phone.startsWith("+") && phone.length === 10) {
+      formattedPhone = `+91${phone}`;
+    }
+
+    // Check OTP record
+    const otpRecord = await Otp.findOne({
+      $or: [{ phone }, { phone: formattedPhone }],
+    });
+    if (!otpRecord || otpRecord.otp !== otp) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid or expired OTP" });
+    }
+
+    // Remove OTP record
+    // await Otp.deleteMany({ phone: formattedPhone });
+
+    // Check if user already exists
     const existingUser = await User.findOne({
-      $or: [{ email }, { phone }],
+      $or: [{ phone }, { phone: formattedPhone }],
     });
 
     if (existingUser) {
-      return res
-        .status(400)
-        .json({ message: "User already exists with this email or phone" });
+      const token = generateToken(existingUser._id);
+      return res.status(200).json({
+        success: true,
+        message: "Login successful",
+        isNewUser: false,
+        token,
+        user: {
+          id: existingUser._id,
+          name: existingUser.name,
+          email: existingUser.email,
+          phone: existingUser.phone,
+        },
+      });
     }
 
-    // Hash password manually
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // New user → ask for details (name/email)
+    return res.status(200).json({
+      success: true,
+      message: "OTP verified. Please complete registration.",
+      isNewUser: true,
+      phone: formattedPhone,
+    });
+  } catch (error) {
+    console.error("Verify OTP error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 
-    // Create new user
+
+/* ---------------------- REGISTER AFTER OTP ---------------------- */
+// exports.registerUser = async (req, res) => {
+//   try {
+//     const { name, email } = req.body;
+
+//     if (!name || !email) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Name, email, and phone are required",
+//       });
+//     }
+
+
+//     // Prevent duplicate registration
+//     let user = await User.findOne({ phone });
+//     if (user) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "User already exists" });
+//     }
+
+//     user = new User({
+//       name,
+//       email,
+//       phone,
+//     });
+
+//     await user.save();
+
+//     const token = generateToken(user._id);
+
+//     return res.status(201).json({
+//       success: true,
+//       message: "User registered successfully",
+//       token,
+//       user: {
+//         id: user._id,
+//         name: user.name,
+//         email: user.email,
+//         phone: user.phone,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Register error:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
+
+
+// GET /api/sellers
+
+exports.registerUser = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    if (!name || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Name and email are required",
+      });
+    }
+
+    // Find the latest verified phone from OTP collection
+    const lastOtp = await Otp.findOne().sort({ createdAt: -1 });
+    console.log(lastOtp)
+
+    if (!lastOtp || !lastOtp.phone) {
+      return res.status(400).json({
+        success: false,
+        message: "No verified phone found. Please verify OTP first.",
+      });
+    }
+
+    const phone = lastOtp.phone;
+
+    //  Check if user already exists
+    let existingUser = await User.findOne({ phone });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exists. Please login instead.",
+      });
+    }
+
+    // Register new user
     const user = new User({
       name,
       email,
       phone,
-      password: hashedPassword,
     });
 
     await user.save();
 
-    // Generate token (auto login after registration)
+    // Generate token
     const token = generateToken(user._id);
+
+    // Optionally remove OTP after registration
+    await Otp.deleteMany({ phone });
 
     res.status(201).json({
       success: true,
@@ -64,57 +349,11 @@ exports.registerUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Register Error:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Register error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-//  Login user (email or phone)
-exports.loginUser = async (req, res) => {
-  try {
-    const { identifier, password } = req.body; // identifier = email or phone
-
-    if (!identifier || !password) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
-    const user = await User.findOne({
-      $or: [{ email: identifier }, { phone: identifier }],
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Compare password manually
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // Generate token
-    const token = generateToken(user._id);
-
-    res.status(200).json({
-      success: true,
-      message: "Login successful",
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-      },
-    });
-  } catch (error) {
-    console.error("Login Error:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-
-// GET /api/sellers
 exports.getAllSellers = async (req, res) => {
   try {
     const sellers = await Seller.find().select(
