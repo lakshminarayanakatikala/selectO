@@ -4,16 +4,22 @@ const {
   registerUser,
   loginUser,
   getNearbySellers,
+  sendOtp,
+  verifyOtp,
 } = require("../controllers/userController");
 const {getSingleProduct, getAllCategories, getProductsByCategory, getAllProducts, getExclusiveOffers, getBachelorFilterProducts } = require("../controllers/productController")
 const userAuthMiddleware = require("../middleware/userAuthMiddleware");
 const { toggleFavorite, getFavorites } = require("../controllers/favoriteController");
 
-// Register
-userRoutes.post("/register", registerUser);
+// // Register
+// userRoutes.post("/register", registerUser);
 
-// Login
-userRoutes.post("/login", loginUser);
+// // Login
+// userRoutes.post("/login", loginUser);
+
+userRoutes.post("/send-otp", sendOtp);
+userRoutes.post("/verify-otp", verifyOtp);
+userRoutes.post("/register", registerUser);
 
 // Toggle a favorite
 userRoutes.post("/toggle", userAuthMiddleware, toggleFavorite);
