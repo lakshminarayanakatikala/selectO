@@ -199,17 +199,17 @@ exports.apiList = [
   },
   {
   method: "POST",
-  path: "/apis/send-otp",
+  path: "/api/user/send-otp",
   desc: "Send OTP to user’s mobile number for authentication",
 },
 {
   method: "POST",
-  path: "/apis/verify-otp",
+  path: "/api/user/verify-otp",
   desc: "Verify OTP entered by user and check if user already exists",
 },
 {
   method: "POST",
-  path: "/apis/register",
+  path: "/api/user/register",
   desc: "Register new user after OTP verification (collects name & email)",
 },
 
