@@ -2,7 +2,6 @@ const express = require("express");
 const userRoutes = express.Router();
 const {
   registerUser,
-  loginUser,
   getNearbySellers,
   sendOtp,
   verifyOtp,
@@ -10,6 +9,7 @@ const {
 const {getSingleProduct, getAllCategories, getProductsByCategory, getAllProducts, getExclusiveOffers, getBachelorFilterProducts } = require("../controllers/productController")
 const userAuthMiddleware = require("../middleware/userAuthMiddleware");
 const { toggleFavorite, getFavorites } = require("../controllers/favoriteController");
+const { getUserProfile, updateUserProfile } = require("../controllers/userProfileController");
 
 // // Register
 // userRoutes.post("/register", registerUser);
@@ -39,6 +39,12 @@ userRoutes.use("/nearbyseller", getNearbySellers);
 
 userRoutes.get("/categories", getAllCategories);
 userRoutes.get("/category/:category", getProductsByCategory);
+
+//user profile routes
+
+userRoutes.get("/profile", userAuthMiddleware, getUserProfile);
+// Edit user profile (name, email)
+userRoutes.put("/profile", userAuthMiddleware, updateUserProfile);
 
 
 

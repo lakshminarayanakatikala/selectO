@@ -176,7 +176,6 @@ exports.sendOtp = async (req, res) => {
 exports.verifyOtp = async (req, res) => {
   try {
     let { phone, otp } = req.body;
-
     if (!phone || !otp) {
       return res
         .status(400)
