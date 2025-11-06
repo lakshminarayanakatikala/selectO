@@ -197,4 +197,20 @@ exports.apiList = [
     path: "/apis/seller-page/:sellerId?category=Fruits",
     desc: "seller main page with categories",
   },
+  {
+  method: "POST",
+  path: "/apis/send-otp",
+  desc: "Send OTP to user’s mobile number for authentication",
+},
+{
+  method: "POST",
+  path: "/apis/verify-otp",
+  desc: "Verify OTP entered by user and check if user already exists",
+},
+{
+  method: "POST",
+  path: "/apis/register",
+  desc: "Register new user after OTP verification (collects name & email)",
+},
+
 ];

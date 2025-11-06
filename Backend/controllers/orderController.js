@@ -1,6 +1,8 @@
 const Order = require("../models/OrderModel");
 const Product = require("../models/ProductModel");
 const Seller = require("../models/SellerModel");
+const mongoose = require("mongoose");
+const CompleteOrder = require("../models/CompleteOrderModel");
 
 //user can create order 
 
@@ -77,92 +79,244 @@ const Seller = require("../models/SellerModel");
 // };
 
 
+// exports.createOrder = async (req, res) => {
+//   try {
+//     const userId = req.user._id;
+//     const { items, address, phone, paymentMode } = req.body;
+
+//     if (!items || items.length === 0) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "No items in order",
+//       });
+//     }
+
+//     // Fetch all products in one query
+//     const productIds = items.map((i) => i.productId);
+//     const products = await Product.find({ _id: { $in: productIds } });
+
+//     if (!products || products.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Products not found",
+//       });
+//     }
+
+//     // Group products by sellerId
+//     const groupedBySeller = {};
+
+//     for (const item of items) {
+//       const product = products.find((p) => p._id.toString() === item.productId);
+
+//       if (!product) continue;
+
+//       if (product.quantitie < item.quantity) {
+//         return res.status(400).json({
+//           success: false,
+//           message: `${product.name} has only ${product.quantitie} left`,
+//         });
+//       }
+
+//       const sellerId = product.sellerId.toString();
+
+//       if (!groupedBySeller[sellerId]) groupedBySeller[sellerId] = [];
+
+//       groupedBySeller[sellerId].push({
+//         productId: product._id,
+//         sellerId,
+//         quantity: item.quantity,
+//         price: product.price,
+//         subtotal: product.price * item.quantity,
+//       });
+
+//       // Reduce product stock
+//       product.quantitie -= item.quantity;
+//       await product.save();
+//     }
+
+//     // Create individual orders per seller
+//     const createdOrders = [];
+//      let grandTotal = 0;
+
+//     for (const [sellerId, sellerItems] of Object.entries(groupedBySeller)) {
+//       const totalPrice = sellerItems.reduce((sum, i) => sum + i.subtotal, 0);
+//       grandTotal += totalPrice
+//       const newOrder = new Order({
+//         userId,
+//         items: sellerItems,
+//         totalPrice,
+//         finalPrice: totalPrice,
+//         address,
+//         phone,
+//         paymentMode,
+//         status: "pending",
+//       });
+
+//       await newOrder.save();
+//       createdOrders.push(newOrder);
+//     }
+
+//     res.status(201).json({
+//       success: true,
+//       message: "Order placed successfully",
+//       orders: createdOrders,
+//       totalPrice: grandTotal
+//     });
+//   } catch (error) {
+//     console.error("Order creation failed:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
+
+// POST /api/user/create-order
+// body: { items: [{ productId, quantity }], address, phone, paymentMode }
 exports.createOrder = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const userId = req.user._id;
     const { items, address, phone, paymentMode } = req.body;
 
-    if (!items || items.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No items in order",
-      });
+    if (!items || !items.length) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, message: "No items in order" });
     }
 
-    // Fetch all products in one query
-    const productIds = items.map((i) => i.productId);
-    const products = await Product.find({ _id: { $in: productIds } });
+    // 1) Load all requested products in one query
+    const productIds = items.map(i => i.productId);
+    const products = await Product.find({ _id: { $in: productIds } }).session(session);
 
-    if (!products || products.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Products not found",
-      });
-    }
+    // Map productId => product
+    const productsMap = {};
+    products.forEach(p => { productsMap[p._id.toString()] = p; });
 
-    // Group products by sellerId
-    const groupedBySeller = {};
+    // 2) Validate stock and calculate per-item subtotals, group by seller
+    let grandTotal = 0;
+    const groupedBySeller = {}; // sellerId -> [orderItem, ...]
+    for (const it of items) {
+      const pid = it.productId;
+      const qty = Number(it.quantity);
+      const product = productsMap[pid];
 
-    for (const item of items) {
-      const product = products.find((p) => p._id.toString() === item.productId);
+      if (!product) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(404).json({ success: false, message: `Product not found: ${pid}` });
+      }
 
-      if (!product) continue;
-
-      if (product.quantitie < item.quantity) {
-        return res.status(400).json({
-          success: false,
-          message: `${product.name} has only ${product.quantitie} left`,
-        });
+      if ((product.quantitie || 0) < qty) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({ success: false, message: `${product.name} has only ${product.quantitie} left` });
       }
 
       const sellerId = product.sellerId.toString();
+      const subtotal = product.price * qty;
+      grandTotal += subtotal;
 
       if (!groupedBySeller[sellerId]) groupedBySeller[sellerId] = [];
-
       groupedBySeller[sellerId].push({
         productId: product._id,
-        sellerId,
-        quantity: item.quantity,
+        sellerId: product.sellerId,
+        quantity: qty,
         price: product.price,
-        subtotal: product.price * item.quantity,
+        subtotal,
       });
 
-      // Reduce product stock
-      product.quantitie -= item.quantity;
-      await product.save();
+      // Decrease product quantity immediately (reserve stock)
+      product.quantitie = product.quantitie - qty;
+      await product.save({ session });
     }
 
-    // Create individual orders per seller
-    const createdOrders = [];
-     let grandTotal = 0;
+    // 3) Create the CompleteOrder
+    const completeOrder = new CompleteOrder({
+      userId,
+      totalPrice: grandTotal,
+      finalPrice: grandTotal,
+      paymentMode: paymentMode || "COD",
+      address,
+      phone,
+      childOrders: [],
+    });
 
+    await completeOrder.save({ session });
+
+    // 4) Create one Order per seller
+    const createdOrders = [];
     for (const [sellerId, sellerItems] of Object.entries(groupedBySeller)) {
-      const totalPrice = sellerItems.reduce((sum, i) => sum + i.subtotal, 0);
-      grandTotal += totalPrice
-      const newOrder = new Order({
+      const totalPrice = sellerItems.reduce((s, it) => s + it.subtotal, 0);
+
+      const order = new Order({
+        completeOrderId: completeOrder._id,
         userId,
         items: sellerItems,
         totalPrice,
-        finalPrice: totalPrice,
+        status: "pending",
         address,
         phone,
-        paymentMode,
-        status: "pending",
+        paymentMode: paymentMode || "COD",
       });
 
-      await newOrder.save();
-      createdOrders.push(newOrder);
+      await order.save({ session });
+      createdOrders.push(order);
+
+      // link to completeOrder
+      completeOrder.childOrders.push(order._id);
     }
 
-    res.status(201).json({
+    // save completeOrder with child orders
+    await completeOrder.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // Return the single complete order with child orders embedded
+    const populatedComplete = await CompleteOrder.findById(completeOrder._id)
+      .populate({
+        path: "childOrders",
+        populate: [
+          { path: "items.productId", select: "name price image category quantitie" },
+          { path: "items.sellerId", select: "shopName shopImage address phone" }
+        ]
+      })
+      .lean();
+
+    return res.status(201).json({
       success: true,
       message: "Order placed successfully",
-      orders: createdOrders,
-      totalPrice: grandTotal
+      completeOrder: populatedComplete,
     });
+
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Order creation failed:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// /api/user/complete-orders collect the user all orders
+exports.getUserCompleteOrders = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const completeOrders = await CompleteOrder.find({ userId })
+      .sort({ createdAt: -1 })
+      .populate({
+        path: "childOrders",
+        populate: [
+          { path: "items.productId", select: "name price image category" },
+          { path: "items.sellerId", select: "shopName shopImage address phone" }
+        ]
+      })
+      .lean();
+
+    return res.status(200).json({ success: true, count: completeOrders.length, completeOrders });
+  } catch (err) {
+    console.error("Error getUserCompleteOrders:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
