@@ -764,13 +764,13 @@ exports.getExclusiveOffers = async (req, res) => {
   try {
     const { productId } = req.query;
 
-    // Fetch all offer products
+    // Fetch all exclusive offer products
     const allOffers = await Product.find({ sellerDiscount: { $gt: 0 } })
       .populate("sellerId", "shopName address phone shopImage location")
       .sort({ sellerDiscount: -1 })
       .lean();
 
-    if (allOffers.length === 0) {
+    if (!allOffers.length) {
       return res.status(404).json({
         success: false,
         message: "No exclusive offer products found",
@@ -780,39 +780,58 @@ exports.getExclusiveOffers = async (req, res) => {
     // Add discounted price
     const offers = allOffers.map((p) => ({
       ...p,
-      discountedPrice: Math.round((p.price - (p.price * p.sellerDiscount) / 100)),
+      discountedPrice: Math.round(
+        p.price - (p.price * p.sellerDiscount) / 100
+      ),
     }));
 
-    let selectedProduct = null;
-
-    // If user clicked on a product
-    if (productId) {
-      selectedProduct = offers.find((p) => p._id.toString() === productId);
-
-      if (!selectedProduct) {
-        return res.status(404).json({
-          success: false,
-          message: "Product not found in exclusive offers",
-        });
-      }
+    // No product clicked → return all offers
+    if (!productId) {
+      return res.status(200).json({
+        success: true,
+        selectedProduct: null,
+        totalOffers: offers.length,
+        relatedOffers: offers,
+      });
     }
 
-    // Remaining exclusive products for the bottom list
-    const remainingOffers = offers.filter(
-      (p) => p._id.toString() !== productId
+    // Find selected product
+    const selectedProduct = offers.find(
+      (p) => p._id.toString() === productId
     );
+
+    if (!selectedProduct) {
+      return res.status(404).json({
+        success: false,
+        message: "Selected product not found in exclusive offers",
+      });
+    }
+
+    //  Get seller ID of the selected product
+    const sellerId = selectedProduct.sellerId._id.toString();
+
+    // Fetch ONLY that seller’s exclusive offers
+    // EXCLUDE selected product intentionally
+    const sellerExclusiveOffers = offers.filter((p) => {
+      return (
+        p.sellerId._id.toString() === sellerId &&  // same seller
+        p._id.toString() !== productId              // exclude selected
+      );
+    });
 
     return res.status(200).json({
       success: true,
-      selectedProduct: selectedProduct || null,
-      totalOffers: offers.length,
-      relatedOffers: remainingOffers, //  Bottom carousel
+      selectedProduct,
+      sellerId,
+      totalSellerOffers: sellerExclusiveOffers.length,
+      relatedOffers: sellerExclusiveOffers, // bottom list
     });
   } catch (error) {
     console.error("Error fetching exclusive offers:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 
 
@@ -917,55 +936,69 @@ exports.toggleBestSelling = async (req, res) => {
 //   }
 // };
 
+
 exports.getBestSellingProducts = async (req, res) => {
   try {
     const { productId } = req.query;
 
+    // Fetch all global best-selling products
     const allProducts = await Product.find({ isBestSelling: true })
       .populate("sellerId", "shopName address phone shopImage location")
       .lean();
 
-    if (allProducts.length === 0) {
+    if (!allProducts.length) {
       return res.status(404).json({
         success: false,
         message: "No best selling products found",
       });
     }
 
-    let selectedProduct = null;
-
-    // If user clicked a product
-    if (productId) {
-      selectedProduct = allProducts.find(
-        (p) => p._id.toString() === productId
-      );
-
-      if (!selectedProduct) {
-        return res.status(404).json({
-          success: false,
-          message: "Product not found in best selling list",
-        });
-      }
+    // If no product clicked → return full list
+    if (!productId) {
+      return res.status(200).json({
+        success: true,
+        selectedProduct: null,
+        totalProducts: allProducts.length,
+        relatedProducts: allProducts,
+      });
     }
 
-    // Remaining best-selling products
-    const remaining = allProducts.filter(
-      (p) => p._id.toString() !== productId
+    // Find the clicked / selected product
+    const selectedProduct = allProducts.find(
+      (p) => p._id.toString() === productId
     );
+
+    if (!selectedProduct) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found in best selling list",
+      });
+    }
+
+    // Get the seller ID of the selected product
+    const sellerId = selectedProduct.sellerId._id.toString();
+
+    // Filter products of the **same seller only**
+    // Also exclude clicked product
+    const sellerBestSelling = allProducts.filter((p) => {
+      return (
+        p.sellerId._id.toString() === sellerId && // same seller
+        p._id.toString() !== productId            // exclude selected
+      );
+    });
 
     return res.status(200).json({
       success: true,
-      selectedProduct: selectedProduct || null,
-      totalProducts: allProducts.length,
-      relatedProducts: remaining, // Bottom carousel
+      selectedProduct,
+      sellerId,
+      totalSellerBestSelling: sellerBestSelling.length,
+      relatedProducts: sellerBestSelling, // bottom list
     });
   } catch (error) {
     console.error("Error fetching best sellers:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
-
 
 
 

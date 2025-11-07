@@ -175,7 +175,7 @@ exports.apiList = [
   {
     method: "GET",
     path: "/api/seller/products/best-selling?productId=6905a99f541acd02982db4b1",
-    desc: "get the best selling products product id is helpful showing single product it is optional",
+    desc: "get the best selling products product id is helpful showing single product it is optional if need it add other wise no",
   },
   {
     method: "POST",
@@ -214,7 +214,7 @@ exports.apiList = [
 },
 {
   method: "GET",
-  path: "/api/user/universalSearch?q=vegetables (or apple etc..)",
+  path: "/api/search/universalSearch?q=vegetables (or apple etc..)",
   desc: "this universal search",
 },
 {
