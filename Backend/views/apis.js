@@ -122,8 +122,8 @@ exports.apiList = [
   },
   {
     method: "GET",
-    path: "/api/user/products/offers/exclusive",
-    desc: "Get exclusive offers based on discount",
+    path: "/api/user/products/offers/exclusive?productId='1234567890'",
+    desc: "Get exclusive offers based on discount product id is helpful showing single product it is optional",
   },
   {
     method: "GET",
@@ -174,8 +174,8 @@ exports.apiList = [
   },
   {
     method: "GET",
-    path: "/api/seller/products/best-selling",
-    desc: "get the best selling products",
+    path: "/api/seller/products/best-selling?productId=6905a99f541acd02982db4b1",
+    desc: "get the best selling products product id is helpful showing single product it is optional",
   },
   {
     method: "POST",
@@ -211,6 +211,11 @@ exports.apiList = [
   method: "POST",
   path: "/api/user/register",
   desc: "Register new user after OTP verification (collects name & email)",
+},
+{
+  method: "GET",
+  path: "/api/user/universalSearch?q=vegetables (or apple etc..)",
+  desc: "this universal search",
 },
 
 ];
