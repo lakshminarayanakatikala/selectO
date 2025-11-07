@@ -585,3 +585,67 @@ exports.getSellerMainPage = async (req, res) => {
 };
 
 
+exports.getSellerProductWithRelated = async (req, res) => {
+  try {
+    const { sellerId, productId } = req.params;
+    let { category } = req.query;
+
+    // Fetch selected product
+    const product = await Product.findOne({ _id: productId, sellerId })
+      .populate("sellerId", "shopName shopImage address phone location")
+      .lean();
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found for this seller",
+      });
+    }
+
+    // If category not provided, auto-detect from product
+    if (!category) {
+      category = product.category;
+    }
+
+    //  Fetch related products from SAME seller & SAME category (EXCLUDE selected product)
+    const relatedProducts = await Product.find({
+      sellerId,
+      category: { $regex: new RegExp(`^${category}$`, "i") },
+      _id: { $ne: productId }, // exclude selected
+    })
+      .select("name price category image description")
+      .lean();
+
+    // Also send seller categories + images (optional but useful for frontend)
+    const sellerCategories = await Product.distinct("category", { sellerId });
+
+    const allCategories = await Category.find({}, "name image");
+
+    const categoriesWithImages = sellerCategories.map((cat) => {
+      const matched = allCategories.find(
+        (c) => c.name.toLowerCase() === cat.toLowerCase()
+      );
+      return {
+        name: cat,
+        image: matched
+          ? matched.image
+          : "https://res.cloudinary.com/demo/image/upload/v1/default.jpg",
+      };
+    });
+
+    //  Response
+    res.status(200).json({
+      success: true,
+      seller: product.sellerId,
+      selectedProduct: product,
+      category,
+      relatedProducts,
+      categories: sellerCategories,
+      categoryImages: categoriesWithImages,
+    });
+  } catch (error) {
+    console.error("Error fetching product with related items:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+

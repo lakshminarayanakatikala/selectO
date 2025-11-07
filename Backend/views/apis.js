@@ -217,5 +217,25 @@ exports.apiList = [
   path: "/api/user/universalSearch?q=vegetables (or apple etc..)",
   desc: "this universal search",
 },
+{
+  method: "GET",
+  path: "/api/seller/orders/complete-orders",
+  desc: "get user orders",
+},
+{
+  method: "GET",
+  path: "/api/user/profile",
+  desc: "get user details",
+},
+{
+  method: "PUT",
+  path: "/api/user/profile",
+  desc: "edit user details",
+},
+{
+  method: "GET",
+  path: "/api/user/:sellerId/product/:productId?category=Fruits",
+  desc: "seller single product category is optinal if we not give automatically take product category",
+},
 
 ];

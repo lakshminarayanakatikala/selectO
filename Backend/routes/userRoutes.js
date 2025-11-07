@@ -5,6 +5,7 @@ const {
   getNearbySellers,
   sendOtp,
   verifyOtp,
+  getSellerProductWithRelated,
 } = require("../controllers/userController");
 const {getSingleProduct, getAllCategories, getProductsByCategory, getAllProducts, getExclusiveOffers, getBachelorFilterProducts } = require("../controllers/productController")
 const userAuthMiddleware = require("../middleware/userAuthMiddleware");
@@ -45,6 +46,9 @@ userRoutes.get("/category/:category", getProductsByCategory);
 userRoutes.get("/profile", userAuthMiddleware, getUserProfile);
 // Edit user profile (name, email)
 userRoutes.put("/profile", userAuthMiddleware, updateUserProfile);
+
+userRoutes.get("/:sellerId/product/:productId", getSellerProductWithRelated);
+
 
 
 
