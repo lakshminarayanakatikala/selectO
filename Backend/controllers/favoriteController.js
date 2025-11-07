@@ -10,7 +10,7 @@ exports.toggleFavorite = async (req, res) => {
     const { productId } = req.body;
 
     const user = await User.findById(userId);
-
+  
     if (!user) {
       return res
         .status(404)

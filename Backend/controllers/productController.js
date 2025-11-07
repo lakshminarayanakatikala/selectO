@@ -736,29 +736,84 @@ exports.getAllProducts = async (req, res) => {
 
 // get offer products
 
+// exports.getExclusiveOffers = async (req, res) => {
+//   try {
+//     // Fetch only products with a discount greater than 0
+//     const products = await Product.find({ sellerDiscount: { $gt: 0 } })
+//       .populate("sellerId", "shopName address phone")
+//       .sort({ sellerDiscount: -1 }); // 👈 Sort descending by discount
+
+//     // Optionally add discounted price
+//     const offers = products.map((p) => ({
+//       ...p._doc,
+//       discountedPrice: p.price - (p.price * p.sellerDiscount) / 100,
+//     }));
+
+//     res.status(200).json({
+//       success: true,
+//       count: offers.length,
+//       offers,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching exclusive offers:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
 exports.getExclusiveOffers = async (req, res) => {
   try {
-    // Fetch only products with a discount greater than 0
-    const products = await Product.find({ sellerDiscount: { $gt: 0 } })
-      .populate("sellerId", "shopName address phone")
-      .sort({ sellerDiscount: -1 }); // 👈 Sort descending by discount
+    const { productId } = req.query;
 
-    // Optionally add discounted price
-    const offers = products.map((p) => ({
-      ...p._doc,
-      discountedPrice: p.price - (p.price * p.sellerDiscount) / 100,
+    // Fetch all offer products
+    const allOffers = await Product.find({ sellerDiscount: { $gt: 0 } })
+      .populate("sellerId", "shopName address phone shopImage location")
+      .sort({ sellerDiscount: -1 })
+      .lean();
+
+    if (allOffers.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No exclusive offer products found",
+      });
+    }
+
+    // Add discounted price
+    const offers = allOffers.map((p) => ({
+      ...p,
+      discountedPrice: Math.round((p.price - (p.price * p.sellerDiscount) / 100)),
     }));
 
-    res.status(200).json({
+    let selectedProduct = null;
+
+    // If user clicked on a product
+    if (productId) {
+      selectedProduct = offers.find((p) => p._id.toString() === productId);
+
+      if (!selectedProduct) {
+        return res.status(404).json({
+          success: false,
+          message: "Product not found in exclusive offers",
+        });
+      }
+    }
+
+    // Remaining exclusive products for the bottom list
+    const remainingOffers = offers.filter(
+      (p) => p._id.toString() !== productId
+    );
+
+    return res.status(200).json({
       success: true,
-      count: offers.length,
-      offers,
+      selectedProduct: selectedProduct || null,
+      totalOffers: offers.length,
+      relatedOffers: remainingOffers, //  Bottom carousel
     });
   } catch (error) {
     console.error("Error fetching exclusive offers:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 
 
@@ -845,22 +900,71 @@ exports.toggleBestSelling = async (req, res) => {
 
 // get best selling product
 
+// exports.getBestSellingProducts = async (req, res) => {
+//   try {
+//     const products = await Product.find({ isBestSelling: true })
+//       .populate("sellerId", "shopName address") // get shop name and address
+//       .limit(20);
+
+//     res.status(200).json({
+//       success: true,
+//       count: products.length,
+//       products,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching best sellers:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
 exports.getBestSellingProducts = async (req, res) => {
   try {
-    const products = await Product.find({ isBestSelling: true })
-      .populate("sellerId", "shopName address") // get shop name and address
-      .limit(20);
+    const { productId } = req.query;
 
-    res.status(200).json({
+    const allProducts = await Product.find({ isBestSelling: true })
+      .populate("sellerId", "shopName address phone shopImage location")
+      .lean();
+
+    if (allProducts.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No best selling products found",
+      });
+    }
+
+    let selectedProduct = null;
+
+    // If user clicked a product
+    if (productId) {
+      selectedProduct = allProducts.find(
+        (p) => p._id.toString() === productId
+      );
+
+      if (!selectedProduct) {
+        return res.status(404).json({
+          success: false,
+          message: "Product not found in best selling list",
+        });
+      }
+    }
+
+    // Remaining best-selling products
+    const remaining = allProducts.filter(
+      (p) => p._id.toString() !== productId
+    );
+
+    return res.status(200).json({
       success: true,
-      count: products.length,
-      products,
+      selectedProduct: selectedProduct || null,
+      totalProducts: allProducts.length,
+      relatedProducts: remaining, // Bottom carousel
     });
   } catch (error) {
     console.error("Error fetching best sellers:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 
 
