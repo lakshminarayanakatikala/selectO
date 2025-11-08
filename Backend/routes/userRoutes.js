@@ -2,7 +2,7 @@ const express = require("express");
 const userRoutes = express.Router();
 const {
   registerUser,
-  getNearbySellers,
+  getNearbyStores,
   sendOtp,
   verifyOtp,
   getSellerProductWithRelated,
@@ -35,7 +35,7 @@ userRoutes.get("/products", getAllProducts);
 userRoutes.get("/products/offers/exclusive", getExclusiveOffers);
 
 // get near by sellers 
-userRoutes.use("/nearbyseller", getNearbySellers);
+userRoutes.get("/nearbyseller", getNearbyStores);
 
 
 userRoutes.get("/categories", getAllCategories);
