@@ -164,7 +164,7 @@ exports.getCart = async (req, res) => {
       cart.totalPrice = totalPrice;
     }
 
-    // 🧠 Group items by seller
+    //Group items by seller
     const groupedBySeller = {};
 
     for (const item of itemsWithTotal) {
@@ -193,11 +193,18 @@ exports.getCart = async (req, res) => {
     // Convert object → array
     const sellers = Object.values(groupedBySeller);
 
+      //Total cart quantity (sum of all item quantities)
+    const cartItemCount = itemsWithTotal.reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
+
     res.status(200).json({
       success: true,
       cart: {
         sellers, // grouped by shop
         totalPrice,
+        cartItemCount
       },
     });
   } catch (error) {

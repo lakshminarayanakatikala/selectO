@@ -68,4 +68,6 @@ const sellerSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+
+sellerSchema.index({ location: "2dsphere" });
 module.exports = mongoose.model("Seller", sellerSchema);

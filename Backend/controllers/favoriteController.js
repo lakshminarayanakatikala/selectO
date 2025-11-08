@@ -17,11 +17,17 @@ exports.toggleFavorite = async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
 
-    const index = user.favorites.indexOf(productId);
+    const productIdStr = productId.toString();
+
+    const index = user.favorites.findIndex(
+      (fav) => fav.toString() === productIdStr
+    );
+
+    // const index = user.favorites.indexOf(productId);
 
     if (index === -1) {
       // Add favorite
-      user.favorites.push(productId);
+      user.favorites.push(productIdStr);
       await user.save();
       return res
         .status(200)
@@ -40,21 +46,102 @@ exports.toggleFavorite = async (req, res) => {
   }
 };
 
-//  Get all favorite products
+//  Get all favorite all products without saparation
+// exports.getFavorites = async (req, res) => {
+//   try {
+//     const userId = req.user._id;
+//     const user = await User.findById(userId).populate("favorites");
+
+//     if (!user) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "User not found" });
+//     }
+
+//     res.status(200).json({ success: true, favorites: user.favorites });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
 exports.getFavorites = async (req, res) => {
   try {
     const userId = req.user._id;
-    const user = await User.findById(userId).populate("favorites");
+
+    // Get user with populated favorite products + seller info
+    const user = await User.findById(userId)
+      .populate({
+        path: "favorites",
+        populate: {
+          path: "sellerId",
+          select: "shopName shopImage address phone location"
+        }
+      })
+      .lean();
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
-    res.status(200).json({ success: true, favorites: user.favorites });
+    const favorites = user.favorites;
+
+    if (!favorites.length) {
+      return res.status(200).json({
+        success: true,
+        groupedFavorites: [],
+      });
+    }
+
+    // Group by sellerId
+    const sellerMap = new Map();
+
+    favorites.forEach((product) => {
+      const seller = product.sellerId;
+      if (!seller) return; // in case seller deleted
+
+      const sellerId = seller._id.toString();
+
+      if (!sellerMap.has(sellerId)) {
+        sellerMap.set(sellerId, {
+          sellerId: seller._id,
+          shopName: seller.shopName,
+          shopImage: seller.shopImage,
+          address: seller.address,
+          phone: seller.phone,
+          location: seller.location,
+          products: [],
+        });
+      }
+
+      sellerMap.get(sellerId).products.push({
+        _id: product._id,
+        name: product.name,
+        image: product.image,
+        price: product.price,
+        category: product.category,
+        description: product.description,
+      });
+    });
+
+    // Convert map to array
+    const groupedFavorites = Array.from(sellerMap.values());
+
+    res.status(200).json({
+      success: true,
+      totalSellers: groupedFavorites.length,
+      groupedFavorites,
+    });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("Favorite grouping error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
+
 

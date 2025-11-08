@@ -44,7 +44,7 @@ app.use("/apis" , showProductsRoute)
 
 // search functionality
 
-app.use('/api/search',searchRouter)
+app.use('/api/search',searchRouter)  
 
 //admin middlewares
 app.use('/api/admin' , categoryRouter)
