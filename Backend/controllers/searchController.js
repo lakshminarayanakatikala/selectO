@@ -374,10 +374,10 @@ exports.getStoresByProduct = async (req, res) => {
       });
     }
 
-    // ✅ Remove all spaces for matching "lipgloss" → "lip gloss"
+    // Remove all spaces for matching "lipgloss" → "lip gloss"
     const cleanedQuery = query.replace(/\s+/g, "").toLowerCase();
 
-    // ✅ Find matching category (space-insensitive)
+    // Find matching category (space-insensitive)
     const allCategories = await Category.find().lean();
 
     const isCategorySearch = allCategories.find((cat) => {
@@ -386,7 +386,7 @@ exports.getStoresByProduct = async (req, res) => {
     });
 
     /*
-     * ✅ CATEGORY SEARCH LOGIC (UPDATED)
+     * CATEGORY SEARCH LOGIC (UPDATED)
      * User searches "makeup" or "make up" → show ALL Make Up category products
      */
     if (isCategorySearch) {
@@ -405,7 +405,7 @@ exports.getStoresByProduct = async (req, res) => {
         });
       }
 
-      // ✅ Group sellers
+      // Group sellers
       const storeMap = new Map();
 
       products.forEach((product) => {
@@ -422,7 +422,7 @@ exports.getStoresByProduct = async (req, res) => {
             address: seller.address,
             phone: seller.phone,
             location: seller.location,
-            products: [], // ✅ Will contain ALL category products
+            products: [], // Will contain ALL category products
           });
         }
 
@@ -445,7 +445,7 @@ exports.getStoresByProduct = async (req, res) => {
       });
     }
 
-    // ✅ PRODUCT SEARCH (name/description) — also space-insensitive
+    // PRODUCT SEARCH (name/description) — also space-insensitive
     const safeQuery = cleanedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
     const products = await Product.find({
@@ -464,7 +464,7 @@ exports.getStoresByProduct = async (req, res) => {
       });
     }
 
-    // ✅ Group by sellers for product search
+    // Group by sellers for product search
     const storeMap = new Map();
 
     products.forEach((product) => {

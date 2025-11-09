@@ -238,4 +238,31 @@ exports.apiList = [
   desc: "seller single product category is optinal if we not give automatically take product category",
 },
 
+{
+  method: "POST",
+  path: "/api/user/address/add",
+  desc: "Add a new address (requires authentication)",
+},
+{
+  method: "GET",
+  path: "/api/user/address/list",
+  desc: "Get all saved addresses (default address listed first)",
+},
+// {
+//   method: "GET",
+//   path: "/api/address/default",
+//   desc: "Get user's default address",
+// },
+{
+  method: "PUT",
+  path: "/api/user/address/set-default",
+  desc: "Set a default address for the user",
+},
+{
+  method: "DELETE",
+  path: "/api/user/address/:addressId",
+  desc: "Delete an address by ID",
+}
+
+
 ];

@@ -17,6 +17,7 @@ const {apiList} = require('./views/apis.js');
 const showProductsRoute = require("./routes/showProducts.js");
 const categoryRouter  = require("./routes/categoryRoutes.js");
 const searchRouter = require("./routes/searchRoutes.js");
+const addressRouter = require("./routes/addressRoutes.js");
 
 const app = express();
 const port = process.env.PORT;   
@@ -38,6 +39,7 @@ app.use("/api/seller/orders", orderRoutes);
 // app.use("/api/notifications", notificationRoutes);
 
 //user middlewares   
+app.use("/api/user/address", addressRouter);
 app.use("/api/user", userRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/apis" , showProductsRoute)
