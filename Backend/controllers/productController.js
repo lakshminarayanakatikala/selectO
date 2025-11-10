@@ -839,47 +839,126 @@ exports.getExclusiveOffers = async (req, res) => {
 
 //  Bachelor Filter → Filter by price (and optionally category)
 
+// exports.getBachelorFilterProducts = async (req, res) => {
+//   try {
+//     const { maxPrice, category } = req.query;
+//     // Example queries:
+//     // ?maxPrice=100 
+//     // ?maxPrice=100&category=Fruits
+
+//     if (!maxPrice || isNaN(maxPrice)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Please provide a valid maxPrice (example: ?maxPrice=100)",
+//       });
+//     }
+
+//     // Dynamic filter
+//     const filter = { price: { $lte: Number(maxPrice) } };
+
+//     if (category) {
+//       // Match case-insensitive category
+//       filter.category = { $regex: new RegExp(category, "i") };
+//     }
+
+//     const products = await Product.find(filter)
+//       .populate("sellerId", "shopName address phone shopImage")
+//       .sort({ price: 1 }); // Sort cheapest first
+
+//     if (products.length === 0) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "No products found under this price/category",
+//         products: [],
+//       });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       count: products.length,
+//       products,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching bachelor filter products:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
 exports.getBachelorFilterProducts = async (req, res) => {
   try {
     const { maxPrice, category } = req.query;
-    // Example queries:
-    // ?maxPrice=100 
-    // ?maxPrice=100&category=Fruits
 
     if (!maxPrice || isNaN(maxPrice)) {
       return res.status(400).json({
         success: false,
-        message: "Please provide a valid maxPrice (example: ?maxPrice=100)",
+        message: "Please provide a valid maxPrice",
       });
     }
 
-    // Dynamic filter
     const filter = { price: { $lte: Number(maxPrice) } };
 
     if (category) {
-      // Match case-insensitive category
       filter.category = { $regex: new RegExp(category, "i") };
     }
 
     const products = await Product.find(filter)
-      .populate("sellerId", "shopName address phone shopImage")
-      .sort({ price: 1 }); // Sort cheapest first
+      .populate(
+        "sellerId",
+        "shopName address phone shopImage location isOnline"
+      )
+      .sort({ price: 1 })
+      .lean();
 
     if (products.length === 0) {
       return res.status(200).json({
         success: true,
-        message: "No products found under this price/category",
-        products: [],
+        message: "No matching products found",
+        stores: [],
       });
     }
 
+    const storeMap = new Map();
+
+    for (const product of products) {
+      const seller = product.sellerId;
+      if (!seller) continue;
+
+      const sellerId = seller._id.toString();
+
+      if (!storeMap.has(sellerId)) {
+        storeMap.set(sellerId, {
+          sellerId: seller._id,
+          shopName: seller.shopName,
+          shopImage: seller.shopImage,
+          address: seller.address,
+          phone: seller.phone,
+          isOnline: seller.isOnline,
+          location: seller.location,
+          category: product.category,  // important for redirection
+          products: [],
+        });
+      }
+
+      storeMap.get(sellerId).products.push({
+        _id: product._id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        category: product.category,
+      });
+    }
+
+    const stores = Array.from(storeMap.values());
+
     res.status(200).json({
       success: true,
-      count: products.length,
-      products,
+      totalStores: stores.length,
+      maxPrice: Number(maxPrice),
+      category: category || "All",
+      stores,
     });
   } catch (error) {
-    console.error("Error fetching bachelor filter products:", error);
+    console.error("Bachelor filter error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
