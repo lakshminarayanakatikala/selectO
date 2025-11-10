@@ -44,7 +44,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/apis" , showProductsRoute)
 
-// search functionality
+// search functionality 
 
 app.use('/api/search',searchRouter)  
 
