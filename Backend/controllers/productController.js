@@ -1112,6 +1112,12 @@ exports.getRelevantProducts = async (req, res) => {
       product: {
         id: product._id,
         name: product.name,
+        price:product.price,
+        originalPrice:product.originalPrice,
+        sellerDiscount:product.sellerDiscount,
+        isDiscounted:product.isDiscounted,
+        quantitie:product.quantitie,
+        image:product.image,
         category: product.category,
         seller: product.sellerId,
       },
