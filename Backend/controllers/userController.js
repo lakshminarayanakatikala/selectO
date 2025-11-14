@@ -588,9 +588,54 @@ exports.getSellerProductsByCategory = async (req, res) => {
 //   }
 // };
 
+// exports.getNearbyStores = async (req, res) => {
+//   try {
+//     const { lat, lng } = req.query;
+
+//     if (!lat || !lng) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Latitude and longitude are required",
+//       });
+//     }
+
+//     const nearbySellers = await Seller.aggregate([
+//       {
+//         $geoNear: {
+//           near: { type: "Point", coordinates: [parseFloat(lng), parseFloat(lat)] },
+//           distanceField: "distance",
+//           spherical: true,
+//           maxDistance: 5000 // 5 km → change as needed
+//         }
+//       },
+//       {
+//         $project: {
+//           shopName: 1,
+//           address: 1,
+//           phone: 1,
+//           shopImage: 1,
+//           location: 1,
+//           categories: 1,
+//           distance: 1
+//         }
+//       }
+//     ]);
+
+//     res.status(200).json({
+//       success: true,
+//       count: nearbySellers.length,
+//       stores: nearbySellers,
+//     });
+
+//   } catch (error) {
+//     console.error("Nearby stores error:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
 exports.getNearbyStores = async (req, res) => {
   try {
-    const { lat, lng } = req.query;
+    const { lat, lng, distance } = req.query;
 
     if (!lat || !lng) {
       return res.status(400).json({
@@ -599,14 +644,19 @@ exports.getNearbyStores = async (req, res) => {
       });
     }
 
+    const maxDistance = distance ? parseInt(distance) : 5000; // default 5km
+
     const nearbySellers = await Seller.aggregate([
       {
         $geoNear: {
-          near: { type: "Point", coordinates: [parseFloat(lng), parseFloat(lat)] },
+          near: {
+            type: "Point",
+            coordinates: [parseFloat(lng), parseFloat(lat)],
+          },
           distanceField: "distance",
           spherical: true,
-          maxDistance: 5000 // 5 km → change as needed
-        }
+          maxDistance: maxDistance,
+        },
       },
       {
         $project: {
@@ -616,22 +666,29 @@ exports.getNearbyStores = async (req, res) => {
           shopImage: 1,
           location: 1,
           categories: 1,
-          distance: 1
-        }
-      }
+          distance: 1,
+        },
+      },
     ]);
+
+    if (!nearbySellers.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No stores found near your location",
+      });
+    }
 
     res.status(200).json({
       success: true,
       count: nearbySellers.length,
       stores: nearbySellers,
     });
-
   } catch (error) {
     console.error("Nearby stores error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 
 
