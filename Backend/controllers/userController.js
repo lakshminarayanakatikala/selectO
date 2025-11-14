@@ -644,7 +644,7 @@ exports.getNearbyStores = async (req, res) => {
       });
     }
 
-    const maxDistance = distance ? parseInt(distance) : 5000; // default 5km
+    const maxDistance = distance ? parseInt(distance) : 10000; // default 5km
 
     const nearbySellers = await Seller.aggregate([
       {
