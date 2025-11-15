@@ -362,7 +362,6 @@ exports.searchSellerProducts = async (req, res) => {
 //   }
 // };
 
-
 exports.getStoresByProduct = async (req, res) => {
   try {
     const query = req.query.q?.trim();
@@ -374,23 +373,25 @@ exports.getStoresByProduct = async (req, res) => {
       });
     }
 
-    // Remove all spaces for matching "lipgloss" → "lip gloss"
+    // Clean and prepare search
     const cleanedQuery = query.replace(/\s+/g, "").toLowerCase();
 
-    // Find matching category (space-insensitive)
-    const allCategories = await Category.find().lean();
+    // Build flexible regex: allow optional spaces
+    // Example: "greenapple" → /g\s*r\s*e\s*e\s*n\s*a\s*p\s*p\s*l\s*e/i
+    const flexibleRegex = new RegExp(
+      query.split("").join("\\s*"), // insert optional spaces between chars
+      "i"
+    );
 
+    //Check category search (space-insensitive)
+    const allCategories = await Category.find().lean();
     const isCategorySearch = allCategories.find((cat) => {
       const cleanedCat = cat.name.replace(/\s+/g, "").toLowerCase();
       return cleanedCat.includes(cleanedQuery);
     });
 
-    /*
-     * CATEGORY SEARCH LOGIC (UPDATED)
-     * User searches "makeup" or "make up" → show ALL Make Up category products
-     */
     if (isCategorySearch) {
-      const categoryName = isCategorySearch.name; // real category
+      const categoryName = isCategorySearch.name;
 
       const products = await Product.find({
         category: { $regex: `^${categoryName}$`, $options: "i" },
@@ -405,7 +406,6 @@ exports.getStoresByProduct = async (req, res) => {
         });
       }
 
-      // Group sellers
       const storeMap = new Map();
 
       products.forEach((product) => {
@@ -422,7 +422,7 @@ exports.getStoresByProduct = async (req, res) => {
             address: seller.address,
             phone: seller.phone,
             location: seller.location,
-            products: [], // Will contain ALL category products
+            products: [],
           });
         }
 
@@ -445,13 +445,13 @@ exports.getStoresByProduct = async (req, res) => {
       });
     }
 
-    // PRODUCT SEARCH (name/description) — also space-insensitive
-    const safeQuery = cleanedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
+    // Product search (handles spaces + no-space)
     const products = await Product.find({
       $or: [
-        { name: { $regex: safeQuery, $options: "i" } },
-        { description: { $regex: safeQuery, $options: "i" } },
+        { name: { $regex: flexibleRegex } },
+        { name: { $regex: new RegExp(query, "i") } },
+        { name: { $regex: new RegExp(cleanedQuery, "i") } },
+        { description: { $regex: flexibleRegex } },
       ],
     })
       .populate("sellerId", "shopName address phone shopImage location")
@@ -464,7 +464,7 @@ exports.getStoresByProduct = async (req, res) => {
       });
     }
 
-    // Group by sellers for product search
+    //Group sellers
     const storeMap = new Map();
 
     products.forEach((product) => {
@@ -501,7 +501,6 @@ exports.getStoresByProduct = async (req, res) => {
       search: query,
       stores: Array.from(storeMap.values()),
     });
-
   } catch (error) {
     console.error("Error in getStoresByProductOrCategory:", error);
     res.status(500).json({
@@ -510,4 +509,5 @@ exports.getStoresByProduct = async (req, res) => {
     });
   }
 };
+
 
