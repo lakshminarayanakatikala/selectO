@@ -884,9 +884,89 @@ exports.getExclusiveOffers = async (req, res) => {
 //   }
 // };
 
+// exports.getBachelorFilterProducts = async (req, res) => {
+//   try {
+//     const { maxPrice, category } = req.query;
+
+//     if (!maxPrice || isNaN(maxPrice)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Please provide a valid maxPrice",
+//       });
+//     }
+
+//     const filter = { price: { $lte: Number(maxPrice) } };
+
+//     if (category) {
+//       filter.category = { $regex: new RegExp(category, "i") };
+//     }
+
+//     const products = await Product.find(filter)
+//       .populate(
+//         "sellerId",
+//         "shopName address phone shopImage location isOnline"
+//       )
+//       .sort({ price: 1 })
+//       .lean();
+
+//     if (products.length === 0) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "No matching products found",
+//         stores: [],
+//       });
+//     }
+
+//     const storeMap = new Map();
+
+//     for (const product of products) {
+//       const seller = product.sellerId;
+//       if (!seller) continue;
+
+//       const sellerId = seller._id.toString();
+
+//       if (!storeMap.has(sellerId)) {
+//         storeMap.set(sellerId, {
+//           sellerId: seller._id,
+//           shopName: seller.shopName,
+//           shopImage: seller.shopImage,
+//           address: seller.address,
+//           phone: seller.phone,
+//           isOnline: seller.isOnline,
+//           location: seller.location,
+//           category: product.category,  // important for redirection
+//           products: [],
+//         });
+//       }
+
+//       storeMap.get(sellerId).products.push({
+//         _id: product._id,
+//         name: product.name,
+//         price: product.price,
+//         image: product.image,
+//         category: product.category,
+//       });
+//     }
+
+//     const stores = Array.from(storeMap.values());
+
+//     res.status(200).json({
+//       success: true,
+//       totalStores: stores.length,
+//       maxPrice: Number(maxPrice),
+//       category: category || "All",
+//       stores,
+//     });
+//   } catch (error) {
+//     console.error("Bachelor filter error:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
+// Advanced Bachelor Filter + Product View
 exports.getBachelorFilterProducts = async (req, res) => {
   try {
-    const { maxPrice, category } = req.query;
+    const { maxPrice, category, productId } = req.query;
 
     if (!maxPrice || isNaN(maxPrice)) {
       return res.status(400).json({
@@ -895,12 +975,13 @@ exports.getBachelorFilterProducts = async (req, res) => {
       });
     }
 
+    //Build filter
     const filter = { price: { $lte: Number(maxPrice) } };
-
-    if (category) {
+    if (category && category.trim()) {
       filter.category = { $regex: new RegExp(category, "i") };
     }
 
+    // Fetch products under price/category
     const products = await Product.find(filter)
       .populate(
         "sellerId",
@@ -917,6 +998,7 @@ exports.getBachelorFilterProducts = async (req, res) => {
       });
     }
 
+    // Group by seller (for store-level display)
     const storeMap = new Map();
 
     for (const product of products) {
@@ -934,7 +1016,7 @@ exports.getBachelorFilterProducts = async (req, res) => {
           phone: seller.phone,
           isOnline: seller.isOnline,
           location: seller.location,
-          category: product.category,  // important for redirection
+          category: product.category || "General",
           products: [],
         });
       }
@@ -950,12 +1032,43 @@ exports.getBachelorFilterProducts = async (req, res) => {
 
     const stores = Array.from(storeMap.values());
 
+    // Handle when user clicks a single product
+    let selectedProduct = null;
+    let relatedProducts = [];
+
+    if (productId) {
+      selectedProduct = await Product.findById(productId)
+        .populate("sellerId", "shopName address phone shopImage location isOnline")
+        .lean();
+
+      if (selectedProduct) {
+        const sellerId = selectedProduct.sellerId._id;
+
+        // Filter products within the same seller + category/price range
+        relatedProducts = await Product.find({
+          sellerId,
+          _id: { $ne: selectedProduct._id },
+          $and: [
+            { price: { $lte: Number(maxPrice) } },
+            category
+              ? { category: { $regex: new RegExp(category, "i") } }
+              : {}, // if category missing, just price filter
+          ],
+        })
+          .select("name price image category")
+          .lean();
+      }
+    }
+
+    // Final structured response
     res.status(200).json({
       success: true,
       totalStores: stores.length,
       maxPrice: Number(maxPrice),
       category: category || "All",
-      stores,
+      selectedProduct: selectedProduct || null, // product clicked by user
+      relatedProducts, //  same seller + same price/category
+      stores, //  seller-wise grouping for UI
     });
   } catch (error) {
     console.error("Bachelor filter error:", error);
